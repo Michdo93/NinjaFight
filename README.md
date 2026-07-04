@@ -35,12 +35,31 @@ statt sie unverändert zu übernehmen.
 | Sounds | `Sounds/*.mp3`, unverändert | `assets/sounds/` |
 | Menü-Hintergrund | eingebettetes PNG aus der FLA-Bibliothek (`GUI/GUIComponent/background.png`) | `assets/img/background.png` |
 
-**Nicht übernommen werden konnten** die eigentlichen Charakter- und
-Umgebungsgrafiken — sie lagen als verschachtelte Vektor-Bodyparts
-(Kopf/Rumpf/Arme/Beine als separate Animate-Symbole) vor, nicht als
-extrahierbare Bilddateien. Sie wurden durch eine prozedural gezeichnete
-Ninja-Figur ersetzt (`assets/js/render.js`), farblich passend zu den vier
-Gegnertypen (Blau/Grün/Rot/Weiß) und dem Helden.
+**Nicht 1:1 übernommen werden konnten** die eigentlichen Charakter- und
+Umgebungsgrafiken selbst — sie liegen als verschachtelte Vektor-Bodyparts
+(Kopf/Rumpf/Arme/Beine als separate Animate-Symbole, jeweils mit vielen
+Tween-Zwischenschritten pro Animation) vor, keine einfachen Bilddateien.
+Eine vollständige Rekonstruktion hätte einen eigenen XFL-Vektor-Renderer
+erfordert. Stattdessen wurden die **echten Fill-Farben** aus
+`BodyPart/{Head,Torso,Sword}.xml` für jede Figur extrahiert
+(`<SolidColor color="#...">`-Werte) und für eine originalgetreue Farbgebung
+verwendet:
+
+| Figur | Anzugfarbe (Torso) | Besatz/Sash | aus |
+|-------|---------------------|-------------|-----|
+| Held | `#333333` (Dunkelgrau) | `#C00E0E` (Rot) | `Hero/BodyPart/Torso.xml` |
+| Enemy Blue | `#003399` (Blau) | `#FFFFFF` (Weiß) | `Enemy/Blue/BodyPart/Torso.xml` |
+| Enemy Green | `#FFCC00` (Gelb) | `#006600` (Grün) | `Enemy/Green/BodyPart/Torso.xml` |
+| Enemy Red | `#CC0000` (Rot) | `#3B3B3B` (Dunkelgrau) | `Enemy/Red/BodyPart/Torso.xml` |
+| Enemy White | `#0066FF` (Blau) | `#FFFFFF` (Weiß) | `Enemy/White/BodyPart/Torso.xml` |
+
+Das rote Kopfband (`#C00E0E`) und der Hautton (`#D2AD81`) sind bei **allen**
+Figuren identisch — offenbar ein figurenübergreifendes Clan-Symbol statt
+einer Fraktionsfarbe. Auch die Schwertfarben (Silberklinge `#CCCCCC`,
+goldener Griff `#FFCC66`) wurden 1:1 aus `BodyPart/Sword.xml` übernommen
+und sind bei jeder Figur identisch. Die grobe Silhouette (Rumpf schulterbreit
+und taillenschmal, Kopf breiter als hoch) wurde an die tatsächliche
+Bounding-Box der Original-Formen angenähert.
 
 ## Architektur
 

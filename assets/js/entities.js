@@ -160,7 +160,7 @@ class Hero {
     this.game.sound.playCollect();
   }
 
-  draw(ctx) { drawNinja(ctx, this.x, this.y, this.facing, "#1c2733", this.state, this.t); }
+  draw(ctx) { drawNinja(ctx, this.x, this.y, this.facing, "Hero", this.state, this.t); }
 }
 
 /* ==================================================================== */
@@ -169,10 +169,10 @@ class Hero {
 /* — hier vollständig mit einfacher Patrouillen-KI implementiert.         */
 /* ==================================================================== */
 const ENEMY_TYPES = {
-  Blue: { color: "#4fb0ff", canShuriken: false, canSword: false },
-  Green: { color: "#7cd992", canShuriken: true, canSword: false },
-  Red: { color: "#ff6b6b", canShuriken: false, canSword: true },
-  White: { color: "#e8edf3", canShuriken: true, canSword: true },
+  Blue: { canShuriken: false, canSword: false },
+  Green: { canShuriken: true, canSword: false },
+  Red: { canShuriken: false, canSword: true },
+  White: { canShuriken: true, canSword: true },
 };
 
 class Enemy {
@@ -256,7 +256,7 @@ class Enemy {
     if (this.hp <= 0) { this.dead = true; this.game.onEnemyKilled(this); }
   }
 
-  draw(ctx) { if (!this.dead) drawNinja(ctx, this.x, this.y, this.facing, this.def.color, this.state, this.t); }
+  draw(ctx) { if (!this.dead) drawNinja(ctx, this.x, this.y, this.facing, this.type, this.state, this.t); }
 }
 
 /* ==================================================================== */
@@ -287,7 +287,7 @@ class Projectile {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.spin);
-    ctx.fillStyle = "#cfd6dd";
+    ctx.fillStyle = SWORD_BLADE;
     drawStar(ctx, 0, 0, 8);
     ctx.restore();
   }
@@ -335,11 +335,12 @@ class PowerUp {
       ctx.bezierCurveTo(14, -16, 14, -8, 0, 6);
       ctx.fill();
     } else if (this.type === "Sword") {
-      ctx.strokeStyle = "#cfd6dd"; ctx.lineWidth = 3;
+      ctx.strokeStyle = SWORD_BLADE; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.moveTo(0, -14); ctx.lineTo(0, 10); ctx.stroke();
+      ctx.strokeStyle = SWORD_HILT; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.moveTo(-8, -8); ctx.lineTo(8, -8); ctx.stroke();
     } else if (this.type === "Shuriken") {
-      ctx.fillStyle = "#ffd23f";
+      ctx.fillStyle = SWORD_BLADE;
       drawStar(ctx, 0, -4, 10);
     }
     ctx.restore();

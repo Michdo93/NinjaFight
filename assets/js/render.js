@@ -152,42 +152,117 @@ function poseFor(state, t) {
   return pose;
 }
 
-function drawNinja(ctx, x, y, facing, color, state, t) {
+/* ---------------------------------------------------------------- */
+/* Original-Farbpaletten — extrahiert aus den echten Fill-Farben in  */
+/* LIBRARY/Character/<Typ>/BodyPart/{Head,Torso,Sword}.xml der FLA.  */
+/* "base" = Anzugfarbe (Torso), "accent" = Besatz/Sash-Farbe,        */
+/* "skin" = Hautton (bei allen Figuren identisch). Das rote          */
+/* Kopfband (#C00E0E) ist bei jeder Figur gleich — ein figurenüber-  */
+/* greifendes Clan-Symbol, keine Fraktionsfarbe.                     */
+/* ---------------------------------------------------------------- */
+const PALETTES = {
+  Hero: { base: "#333333", accent: "#c00e0e", skin: "#d2ad81" },
+  Blue: { base: "#003399", accent: "#ffffff", skin: "#d2ad81" },
+  Green: { base: "#ffcc00", accent: "#006600", skin: "#d2ad81" },
+  Red: { base: "#cc0000", accent: "#3b3b3b", skin: "#d2ad81" },
+  White: { base: "#0066ff", accent: "#ffffff", skin: "#d2ad81" },
+};
+const HEADBAND_RED = "#c00e0e";
+const SWORD_BLADE = "#cccccc", SWORD_BLADE_EDGE = "#999999";
+const SWORD_HILT = "#ffcc66", SWORD_HILT_DARK = "#996633";
+
+function drawNinja(ctx, x, y, facing, type, state, t) {
+  const pal = PALETTES[type] || PALETTES.Hero;
   const p = poseFor(state, t);
   ctx.save();
   ctx.translate(x, y - p.bob);
   ctx.rotate((p.tilt * facing * Math.PI) / 180);
   ctx.scale(facing, 1);
-  ctx.strokeStyle = color; ctx.fillStyle = color;
-  ctx.lineWidth = 5; ctx.lineCap = "round";
+  ctx.lineCap = "round";
 
-  // Beine
-  limb(ctx, 0, -2, p.legL, 28);
-  limb(ctx, 0, -2, p.legR, 28);
-  // Rumpf
-  ctx.beginPath(); ctx.moveTo(0, -2); ctx.lineTo(0, -40); ctx.stroke();
-  // Arme
-  limb(ctx, 0, -36, p.armL, 24);
-  limb(ctx, 0, -36, p.armR, 24, p.weapon);
-  // Kopf (mit Ninja-Maske: Augenstreifen)
-  ctx.beginPath(); ctx.arc(0, -48, 11, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "#0a0e14";
-  ctx.fillRect(-11, -51, 22, 5);
+  // Beine (Anzugfarbe)
+  ctx.strokeStyle = pal.base; ctx.lineWidth = 6;
+  limb(ctx, 0, -4, p.legL, 26, null, pal);
+  limb(ctx, 0, -4, p.legR, 26, null, pal);
+
+  // Rumpf: leicht taillierte Form (Schultern breiter als Hüfte),
+  // proportional an die aus der FLA extrahierte Torso-Bounding-Box
+  // angenähert (Original ca. 73×104 "pt" im Symbolraum -> Breite:Höhe ≈ 0.7)
+  ctx.fillStyle = pal.base;
+  ctx.beginPath();
+  ctx.moveTo(-11, -4);
+  ctx.quadraticCurveTo(-14, -20, -12, -34);
+  ctx.lineTo(12, -34);
+  ctx.quadraticCurveTo(14, -20, 11, -4);
+  ctx.closePath();
+  ctx.fill();
+  // Schräger Besatz/Sash in der Akzentfarbe (entspricht der zweiten
+  // Fill-Farbe jeder Torso.xml)
+  ctx.fillStyle = pal.accent;
+  ctx.beginPath();
+  ctx.moveTo(-12, -34); ctx.lineTo(-6, -34); ctx.lineTo(11, -6); ctx.lineTo(5, -4);
+  ctx.closePath();
+  ctx.fill();
+
+  // Arme (Anzugfarbe, Hände in Hautton)
+  arm(ctx, 0, -32, p.armL, 22, null, pal);
+  arm(ctx, 0, -32, p.armR, 22, p.weapon, pal);
+
+  // Kopf: Hautton + dunkles Maskenband über den Augen + rotes Kopfband
+  ctx.save();
+  ctx.translate(0, -42);
+  ctx.fillStyle = pal.skin;
+  ctx.beginPath(); ctx.ellipse(0, -6, 11, 10, 0, 0, Math.PI * 2); ctx.fill();
+  // Maskenband
+  ctx.fillStyle = "#232323";
+  ctx.beginPath(); ctx.ellipse(0, -8, 11.2, 3.4, 0, 0, Math.PI * 2); ctx.fill();
+  // rotes Kopfband mit zwei flatternden Enden
+  ctx.fillStyle = HEADBAND_RED;
+  ctx.fillRect(-11.5, -13.5, 23, 3.4);
+  ctx.beginPath();
+  ctx.moveTo(11, -12); ctx.lineTo(20, -9); ctx.lineTo(11, -9.5);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
 
   ctx.restore();
 }
 
-function limb(ctx, x, y, angleDeg, length, weapon) {
+function limb(ctx, x, y, angleDeg, length, weapon, pal) {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate((angleDeg * Math.PI) / 180);
+  ctx.strokeStyle = pal.base;
   ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, length); ctx.stroke();
+  // Fuß in Hautton/dunkel angedeutet
+  ctx.fillStyle = "#1a1a1a";
+  ctx.beginPath(); ctx.ellipse(0, length + 2, 5, 3, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
+function arm(ctx, x, y, angleDeg, length, weapon, pal) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate((angleDeg * Math.PI) / 180);
+  ctx.strokeStyle = pal.base; ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, length); ctx.stroke();
+  // Hand
+  ctx.fillStyle = pal.skin;
+  ctx.beginPath(); ctx.arc(0, length, 3.5, 0, Math.PI * 2); ctx.fill();
+
   if (weapon === "sword") {
-    ctx.strokeStyle = "#cfd6dd"; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(0, length); ctx.lineTo(0, length + 26); ctx.stroke();
+    // Schwert in den Original-Sword.xml-Farben (Silberklinge, goldener Griff)
+    ctx.strokeStyle = SWORD_BLADE; ctx.lineWidth = 3.5;
+    ctx.beginPath(); ctx.moveTo(0, length); ctx.lineTo(0, length + 24); ctx.stroke();
+    ctx.strokeStyle = SWORD_BLADE_EDGE; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, length + 2); ctx.lineTo(0, length + 22); ctx.stroke();
+    ctx.fillStyle = SWORD_HILT;
+    ctx.fillRect(-3, length - 5, 6, 5);
+    ctx.strokeStyle = SWORD_HILT_DARK; ctx.lineWidth = 1;
+    ctx.strokeRect(-3, length - 5, 6, 5);
   } else if (weapon === "shuriken") {
-    ctx.fillStyle = "#cfd6dd";
+    ctx.fillStyle = SWORD_BLADE;
     drawStar(ctx, 0, length + 4, 6);
+    ctx.strokeStyle = SWORD_BLADE_EDGE; ctx.lineWidth = 1; ctx.stroke();
   }
   ctx.restore();
 }
