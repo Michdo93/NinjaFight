@@ -1,0 +1,70 @@
+/**
+ * Original-Sprachdaten aus ExternalData/strings.json, unverändert übernommen.
+ */
+
+const STRINGS = {
+  "English": {
+    "langLabel": "English",
+    "title": "Ninja Fight",
+    "loading": "Loading",
+    "startGame": "Play",
+    "resumeGame": "Resume",
+    "settings": "Settings",
+    "highscore": "Highscore",
+    "loadingHighscores": "Loading Highscores",
+    "howTo": "How To",
+    "back": "Back",
+    "backToMenu": "Back to Menu",
+    "sendScore": "Send Score",
+    "playAgain": "Play Again",
+    "level": "Level",
+    "lifeEnergy": "Life Energy",
+    "points": "Points",
+    "time": "Time",
+    "gameOverTitle": "GAME OVER",
+    "highscoreTitle": "HIGHSCORE",
+    "settingsTitle": "SETTINGS",
+    "howToTitle": "HOW TO",
+    "creditsTitle": "CREDITS",
+    "yourName": "Your Name",
+    "volume": "Volume",
+    "language": "Language",
+    "description": "Try to kill as many renegaded ninjas as you can. For each kill you got one point multiplied with the number of the current level.",
+    "controls": "Controls:\nW / up - climb upwards                     R - hit\nA / left - turn / walk left                      F - kick\nS / down - climb downwards            E - special function 1 (sword)\nD / right - turn / walk right                 Q - special function 2 (shuriken)\nSPACE - jump",
+    "createdBy": "Created by",
+    "musicBy": "Music by"
+  },
+  "Deutsch": {
+    "langLabel": "Deutsch",
+    "title": "Ninja Fight",
+    "loading": "Laden",
+    "startGame": "Spielen",
+    "resumeGame": "Fortsetzen",
+    "settings": "Optionen",
+    "highscore": "Highscore",
+    "loadingHighscores": "Highscores herunterladen",
+    "howTo": "How To",
+    "back": "Zurück",
+    "backToMenu": "Zurück zum Menü",
+    "sendScore": "Score abschicken",
+    "playAgain": "Nochmal",
+    "level": "Level",
+    "lifeEnergy": "Lebensenergie",
+    "points": "Punkte",
+    "time": "Zeit",
+    "gameOverTitle": "GAME OVER",
+    "highscoreTitle": "HIGHSCORE",
+    "settingsTitle": "OPTIONEN",
+    "howToTitle": "HOW TO",
+    "creditsTitle": "CREDITS",
+    "yourName": "Dein Name",
+    "volume": "Lautstärke",
+    "language": "Sprache",
+    "description": "Versuche so viele abtrünnige Ninjas wie möglich zu killen. Für jeden Kill erhälst du einen Punkt multipliziert mit dem aktuellen Levels.",
+    "controls": "Steuerung:\nW / auf - hochklettern                        R - schlagen\nA / links - links drehen / laufen         F - treten\nS / ab - runterklettern                         E - Spezialfunktion 1 (Schwert)\nD / rechts - rechts drehen / laufen    Q - Spezialfunktion 2 (Shuriken)\nSPACE - springen",
+    "createdBy": "Erstellt von",
+    "musicBy": "Musik von"
+  }
+};
+
+if (typeof module !== "undefined") module.exports = { STRINGS };
