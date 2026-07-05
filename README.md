@@ -7,7 +7,7 @@ Repo portiert das komplette, in der Abgabe unfertig gebliebene Spiel nach
 **HTML5 Canvas + Vanilla JavaScript** — lauffähig direkt im Browser, ohne
 Flash Player, ohne Build-Schritt, bereit für GitHub Pages.
 
-▶ **[Spielen](./index.html)**
+▶ **[Spielen](https://michdo93.github.io/NinjaFight/)**
 
 ## Ausgangslage
 
