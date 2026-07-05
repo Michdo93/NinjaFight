@@ -244,7 +244,20 @@ class GameManager {
         const x = 120 + Math.random() * (STAGE_W - 240);
         this.powerUps.push(new PowerUp(type, x, -20));
       }
-      if (this.timeLeft <= 0) { this.timeLeft = 0; ui.setStatus("Zeit abgelaufen"); setTimeout(() => this.nextLevel(), 600); this.isHeroDead = true; }
+      if (this.timeLeft <= 0) {
+        this.timeLeft = 0;
+        this.isHeroDead = true;
+        if (this.enemies.some(e => !e.dead)) {
+          // Zeit abgelaufen, aber noch Gegner übrig -> Niederlage (Fix:
+          // vorher wurde die Zeitüberschreitung immer als "geschafft"
+          // gewertet und einfach ins nächste Level weitergeschaltet)
+          ui.setStatus("Zeit abgelaufen — Gegner übrig!");
+          setTimeout(() => this.endGame(), 900);
+        } else {
+          ui.setStatus("Zeit abgelaufen");
+          setTimeout(() => this.nextLevel(), 600);
+        }
+      }
     }
 
     if (this.hero && !this.isHeroDead) this.hero.update(dt);

@@ -199,6 +199,15 @@ farblich angenähert.
 | Lebenspunkte des Helden pro Level unterschiedlich, aufaddierend statt zurückgesetzt | `this.lifeEnergy += 10 * levelNum` statt `= 10 * levelNum` — Level 1 gibt +10, Level 2 +20, … Level 10 +100, jeweils zum Rest aus dem vorigen Level addiert. Bei einem echten Neustart (`startGame()`) wird auf 0 zurückgesetzt, damit die Formel wieder sauber bei 10 beginnt |
 | Schwert/Shuriken müssen ins nächste Level übertragen werden | war für `hasSword`/`hasShuriken`/`shurikenCount` bereits umgesetzt — ergänzt um den verbleibenden `swordTimer` (der 30-Sekunden-Countdown läuft jetzt nahtlos über Levelgrenzen hinweg weiter, statt beim Levelwechsel neu zu starten) |
 
+## Sechste Feedback-Runde: Gegner leiden genauso wie der Held
+
+| Wunsch | Umsetzung |
+|--------|-----------|
+| Herz heilt auch Gegner | war bereits umgesetzt (`Enemy.collectPowerUp("Heart")`) — mit Test bestätigt |
+| Feuer/Stacheln verletzen auch Gegner | neue `Enemy.checkHazards()`, spiegelbildlich zu `Hero.checkHazards()`: Feuer zieht 1 HP pro Kontakt (mit kurzer Abklingzeit), Stacheln 5 HP — Gegner sterben dadurch nicht sofort, sondern verlieren nur Lebenspunkte, wie gewünscht |
+| Friendly Fire zwischen Gegnern (Schlag/Tritt/Schwert/Shuriken) | `Enemy.hitNearbyEnemies()` prüft bei jedem Nahkampftreffer zusätzlich andere Gegner im Wirkungsbereich; `Projectile` wurde umgebaut, um die tatsächliche Werfer-Instanz zu kennen (statt nur "hero"/"enemy" als Text) und trifft jetzt jeden **außer dem Werfer selbst** — ein Shuriken kann dadurch versehentlich einen anderen Gegner treffen |
+| Zeit abgelaufen + noch Gegner übrig = Niederlage | vorher wurde ein Zeitablauf immer als "Level geschafft, weiter" gewertet, egal wie viele Gegner noch lebten. Jetzt: sind bei Zeit-Ablauf noch Gegner am Leben, ist das Spiel vorbei (Game Over) statt automatisch ins nächste Level zu wechseln |
+
 ## Notwendige Anpassungen für GitHub Pages
 
 - **Server-Highscore → `localStorage`.** Das Original schickte Highscores

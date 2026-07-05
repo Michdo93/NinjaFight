@@ -68,7 +68,7 @@ class Hero {
   useShuriken() {
     if (this.hasShuriken && this.shurikenCount > 0) {
       this.setState("Throw");
-      this.game.spawnProjectile(this.x + this.facing * 18, this.y - 30, this.facing, "hero");
+      this.game.spawnProjectile(this.x + this.facing * 18, this.y - 30, this.facing, this);
       this.shurikenCount--;
       if (this.shurikenCount <= 0) this.hasShuriken = false;
     }
@@ -221,6 +221,7 @@ class Enemy {
     this.onLadder = false;
     this.climbCooldown = 3 + Math.random() * 4;
     this.jumpCooldown = 2 + Math.random() * 3;
+    this.invulnTimer = 0;
   }
 
   get box() { return rectOf(this.x - this.width / 2, this.y - this.height, this.width, this.height); }
@@ -292,10 +293,16 @@ class Enemy {
       if (this.swordTimer <= 0 && !this.def.canSword) { this.hasSword = false; this.swordTimer = 0; }
     }
 
+    // Feuer/Stacheln verletzen auch Gegner, nicht nur den Helden (Fix)
+    if (this.invulnTimer > 0) this.invulnTimer -= dt;
+    this.checkHazards();
+    if (this.dead) return;
+
     // Held angreifen, wenn in Reichweite — unterbricht die Bewegung nur ganz
     // kurz (Angriffsdauer), nicht die gesamte Abklingzeit. Alle Gegner
     // können Schlagen UND Treten (unterschiedlicher Schaden), Shuriken/
-    // Schwert nur mit der jeweiligen Spezialfähigkeit.
+    // Schwert nur mit der jeweiligen Spezialfähigkeit. Nahkampf-Treffer
+    // verletzen nebenbei auch andere Gegner im Wirkungsbereich (Friendly Fire).
     const hero = this.game.hero;
     if (hero && !this.game.isHeroDead && this.attackCooldown <= 0 && !this.onLadder) {
       const dist = Math.hypot(hero.x - this.x, hero.y - this.y);
@@ -304,19 +311,53 @@ class Enemy {
         const useKick = Math.random() < 0.5;
         this.setState(useKick ? "Kick" : "Hit");
         this.attackTimer = 0.3; this.attackCooldown = 1.4 + Math.random();
-        hero.takeDamage(useKick ? DAMAGE.Kick : DAMAGE.Hit);
+        const dmg = useKick ? DAMAGE.Kick : DAMAGE.Hit;
+        hero.takeDamage(dmg);
+        this.hitNearbyEnemies(30, dmg);
       } else if (dist < 260 && this.hasShuriken && this.shurikenCount > 0 && Math.random() < 0.5) {
         this.setState("Throw"); this.attackTimer = 0.3; this.attackCooldown = 2 + Math.random() * 1.5;
-        this.game.spawnProjectile(this.x + this.facing * 18, this.y - 30, this.facing, "enemy");
+        this.game.spawnProjectile(this.x + this.facing * 18, this.y - 30, this.facing, this);
         this.shurikenCount--;
         if (this.shurikenCount <= 0) { this.shurikenCount = this.def.canShuriken ? 99 : 0; if (!this.def.canShuriken) this.hasShuriken = false; }
       } else if (dist < 60 && this.hasSword) {
         this.setState("SwordHit"); this.attackTimer = 0.3; this.attackCooldown = 1.6 + Math.random();
         hero.takeDamage(DAMAGE.Sword);
+        this.hitNearbyEnemies(46, DAMAGE.Sword);
       }
     }
 
     if (this.attackTimer <= 0 && ["Hit", "Kick", "SwordHit", "Throw"].includes(this.state)) this.setState("Idle");
+  }
+
+  // Nahkampf-Friendly-Fire: andere Gegner im Wirkungsbereich eines
+  // Schlags/Tritts/Schwerthiebs werden ebenfalls getroffen
+  hitNearbyEnemies(range, dmg) {
+    this.game.enemies.forEach(other => {
+      if (other === this || other.dead) return;
+      const dx = other.x - this.x;
+      if (Math.abs(dx) < range && Math.sign(dx || 1) === this.facing && Math.abs(other.y - this.y) < 20) {
+        other.takeDamage(dmg);
+      }
+    });
+  }
+
+  // entspricht Hero.checkHazards() — Feuer/Stacheln verletzen auch Gegner
+  checkHazards() {
+    const foot = { x: this.x, y: this.y };
+    this.game.level.knives.forEach(kz => {
+      if (this.invulnTimer <= 0 && foot.x > kz.x && foot.x < kz.x + kz.w && foot.y > kz.y && foot.y < kz.y + kz.h + 6) {
+        this.takeDamage(5);
+        this.invulnTimer = 0.6;
+      }
+    });
+    if (this.invulnTimer <= 0) {
+      this.game.level.flames.forEach(fl => {
+        if (foot.x > fl.x - 2 && foot.x < fl.x + fl.w && foot.y > fl.y - fl.h && foot.y <= fl.y + 4) {
+          this.takeDamage(1);
+          this.invulnTimer = 0.6;
+        }
+      });
+    }
   }
 
   findNearbyLadder() {
@@ -385,7 +426,7 @@ class Projectile {
   constructor(x, y, dir, owner) {
     this.x = x; this.y = y;
     this.dir = dir;
-    this.owner = owner; // "hero" oder "enemy"
+    this.owner = owner; // die tatsächliche Held-/Gegner-Instanz, die geworfen hat
     this.speed = 480;
     this.dead = false;
     this.spin = 0;
@@ -394,12 +435,20 @@ class Projectile {
     this.x += this.dir * this.speed * dt;
     this.spin += dt * 20;
     if (this.x < -20 || this.x > STAGE_W + 20) this.dead = true;
+    if (this.dead) return;
 
-    if (this.owner === "hero") {
-      game.enemies.forEach(en => { if (!en.dead && !this.dead && Math.hypot(en.x - this.x, (en.y - 30) - this.y) < 22) { en.takeDamage(DAMAGE.Shuriken); this.dead = true; } });
-    } else if (game.hero && !this.dead && Math.hypot(game.hero.x - this.x, (game.hero.y - 30) - this.y) < 22) {
-      game.hero.takeDamage(DAMAGE.Shuriken);
-      this.dead = true;
+    // trifft jeden außer den Werfer selbst — dadurch verletzt ein von
+    // einem Gegner geworfenes Shuriken auch andere Gegner (Friendly Fire)
+    const targets = [];
+    if (game.hero && game.hero !== this.owner && !game.isHeroDead) targets.push(game.hero);
+    game.enemies.forEach(en => { if (!en.dead && en !== this.owner) targets.push(en); });
+
+    for (const t of targets) {
+      if (Math.hypot(t.x - this.x, (t.y - 30) - this.y) < 22) {
+        t.takeDamage(DAMAGE.Shuriken);
+        this.dead = true;
+        break;
+      }
     }
   }
   draw(ctx) {
