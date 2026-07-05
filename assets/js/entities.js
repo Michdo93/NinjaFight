@@ -11,7 +11,7 @@
 
 // gemeinsame Schadenstabelle für Held und Gegner
 const DAMAGE = { Hit: 1, Kick: 2, Shuriken: 5, Sword: 10 };
-const SWORD_PICKUP_DURATION = 5; // Sekunden, wie gewünscht zeitlich begrenzt
+const SWORD_PICKUP_DURATION = 30; // Sekunden ab dem Moment des Aufhebens (nicht während es am Boden liegt)
 
 /* ==================================================================== */
 /* Hero — entspricht HeroController.as                                   */

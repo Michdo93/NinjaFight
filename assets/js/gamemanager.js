@@ -75,6 +75,7 @@ class GameManager {
   startGame() {
     this.levelNum = 0;
     this.points = 0;
+    this.lifeEnergy = 0; // Grundlage für die aufaddierende Formel in nextLevel()
     this.paused = false;
     this.isHeroDead = false;
     this.hero = null; // frisches Spiel, keine Waffen aus einem vorigen Durchlauf übernehmen
@@ -91,6 +92,7 @@ class GameManager {
     // werden — cleanUpLevel() setzt this.hero sofort auf null (Bugfix:
     // vorher wurden die Werte danach gelesen und waren immer schon weg)
     const carryHasSword = this.hero ? this.hero.hasSword : false;
+    const carrySwordTimer = this.hero ? this.hero.swordTimer : 0;
     const carryHasShuriken = this.hero ? this.hero.hasShuriken : false;
     const carryShurikenCount = this.hero ? this.hero.shurikenCount : 0;
 
@@ -101,13 +103,16 @@ class GameManager {
     this.isHeroDead = false;
 
     this.level = buildLevel(this.levelNum);
-    this.lifeEnergy = 10 * this.levelNum;
+    // Lebenspunkte werden aufaddiert, nicht zurückgesetzt: Level N gibt
+    // 10*N Punkte hinzu, zu dem, was vom vorigen Level übrig blieb
+    this.lifeEnergy += 10 * this.levelNum;
     // Original-Formel (120s * Level) nur für die vier Original-Level
     // beibehalten — sonst würde Level 10 zu einer 20-Minuten-Marathon-Runde
     this.timeLeft = this.levelNum <= 4 ? 120 * this.levelNum : 480 + 40 * (this.levelNum - 4);
 
     this.hero = new Hero(this, 90, GROUND_LEVEL_Y);
     this.hero.hasSword = carryHasSword;
+    this.hero.swordTimer = carrySwordTimer;
     this.hero.hasShuriken = carryHasShuriken;
     this.hero.shurikenCount = carryShurikenCount;
     this.enemies = [];

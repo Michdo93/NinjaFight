@@ -190,6 +190,15 @@ farblich angenähert.
 | Alle Gegner hatten gleich viel HP (3, "nach 3 Tritten KO") | HP jetzt an den Ursprungslevel gekoppelt, nicht an das aktuelle Level: Blue (Level 1) = 10 HP, Green (Level 2) = 20 HP, Red (Level 3) = 30 HP, White (Level 4) = 50 HP — bleibt auch in den gemischten Leveln 5–10 so |
 | Gegner aus Level 1 konnten nur "Hit" | alle Gegner wählen jetzt zufällig zwischen Schlag und Tritt im Nahkampf; Shuriken/Schwert bleiben exklusiv an die jeweilige Spezialfähigkeit gebunden (Blue: keine, Green: Shuriken, Red: Schwert, White: beides) |
 
+## Fünfte Feedback-Runde: Feinjustierung
+
+| Wunsch | Umsetzung |
+|--------|-----------|
+| Schwert 30s statt 5s haltbar, Timer läuft erst ab dem Aufheben | `SWORD_PICKUP_DURATION` von 5 auf 30 erhöht. Ein am Boden liegendes Schwert hatte ohnehin nie ein Ablaufdatum — der Timer startet ausschließlich beim tatsächlichen Aufheben |
+| Gegner ohne Spezialfähigkeit sollen gestohlene Items trotzdem benutzen können | war bereits korrekt umgesetzt (Angriffslogik prüft die veränderliche `hasSword`/`hasShuriken`-Eigenschaft, nicht die feste `def.canSword`/`canShuriken`) — mit eigenem Test verifiziert |
+| Lebenspunkte des Helden pro Level unterschiedlich, aufaddierend statt zurückgesetzt | `this.lifeEnergy += 10 * levelNum` statt `= 10 * levelNum` — Level 1 gibt +10, Level 2 +20, … Level 10 +100, jeweils zum Rest aus dem vorigen Level addiert. Bei einem echten Neustart (`startGame()`) wird auf 0 zurückgesetzt, damit die Formel wieder sauber bei 10 beginnt |
+| Schwert/Shuriken müssen ins nächste Level übertragen werden | war für `hasSword`/`hasShuriken`/`shurikenCount` bereits umgesetzt — ergänzt um den verbleibenden `swordTimer` (der 30-Sekunden-Countdown läuft jetzt nahtlos über Levelgrenzen hinweg weiter, statt beim Levelwechsel neu zu starten) |
+
 ## Notwendige Anpassungen für GitHub Pages
 
 - **Server-Highscore → `localStorage`.** Das Original schickte Highscores
