@@ -63,13 +63,18 @@ canvas#stage {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(180deg, rgba(5,7,10,0.72), rgba(5,7,10,0.9)), center/cover no-repeat;
+  background: linear-gradient(180deg, rgba(5,7,10,0.72), rgba(5,7,10,0.9));
   text-align: center;
   padding: 20px;
   z-index: 10;
 }
 .screen.active { display: flex; }
 .screen.with-bg { background-image: linear-gradient(180deg, rgba(5,7,10,0.55), rgba(5,7,10,0.85)), url("../img/background.png"); }
+/* #screen-game liegt während des Spiels über dem Canvas — darf das
+   Spielfeld NICHT abdunkeln. ID-Selektor gewinnt hier bewusst gegen
+   .screen/.with-bg, egal welche Klassen zusätzlich gesetzt sind
+   (siehe README, Bugfix-Notiz zum "Overlay, das das Spiel abdunkelt"). */
+#screen-game { background: none; }
 
 .game-title {
   font-family: var(--font-display);

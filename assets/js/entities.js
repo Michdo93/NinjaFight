@@ -89,8 +89,9 @@ class Hero {
       this.vy = 0;
       this.y += (k.up ? -1 : 1) * CLIMB_SPEED * dt;
       this.y = clamp(this.y, ladder.top + 10, ladder.bottom);
-      this.setState(k.up || k.down ? "Walk" : "Idle");
+      this.setState(k.up || k.down ? "Climb" : "Idle");
     } else {
+      if (this._wasClimbing && this.state === "Climb") this.setState("Idle");
       this._wasClimbing = false;
     }
 
@@ -139,7 +140,7 @@ class Hero {
     });
     if (this.invulnTimer <= 0) {
       this.game.level.flames.forEach(fl => {
-        if (foot.x > fl.x && foot.x < fl.x + fl.w && foot.y > fl.y && foot.y < fl.y + fl.h + 6) {
+        if (foot.x > fl.x - 2 && foot.x < fl.x + fl.w && foot.y > fl.y - fl.h && foot.y <= fl.y + 4) {
           this.game.changeLifeEnergy(1, true);
           this.invulnTimer = 0.6;
         }
@@ -188,10 +189,16 @@ class Enemy {
     this.hp = 3;
     this.dead = false;
     this.width = 24; this.height = 48;
-    this.patrolLeft = x - 70; this.patrolRight = x + 70;
+    // deutlich groesserer Streifraum, damit die Gegner sich wirklich ueber
+    // die Plattform bewegen statt nur auf der Stelle zu treten
+    this.patrolLeft = Math.max(20, x - 220);
+    this.patrolRight = Math.min(STAGE_W - 20, x + 220);
     this.attackCooldown = 1 + Math.random() * 2;
     this.attackTimer = 0;
     this.onGround = false;
+    this.onLadder = false;
+    this.climbCooldown = 3 + Math.random() * 4;
+    this.jumpCooldown = 2 + Math.random() * 3;
   }
 
   get box() { return rectOf(this.x - this.width / 2, this.y - this.height, this.width, this.height); }
@@ -200,28 +207,53 @@ class Enemy {
     if (this.dead) return;
     this.t += dt;
     this.attackCooldown -= dt;
+    this.climbCooldown -= dt;
+    this.jumpCooldown -= dt;
     if (this.attackTimer > 0) this.attackTimer -= dt;
 
-    // einfache Patrouillen-KI (im Original nie implementiert)
+    // entspricht der (im Original nie implementierten) Feind-KI: Patrouille,
+    // gelegentliches Klettern und Springen — deutlich lebendiger als reines
+    // Stehenbleiben (Fix fuer KnownBugs #12)
+    const ladder = this.findNearbyLadder();
     if (this.attackTimer <= 0) {
-      this.x += this.facing * ENEMY_SPEED * dt;
-      this.setState("Walk");
-      if (this.x < this.patrolLeft) { this.x = this.patrolLeft; this.facing = 1; }
-      else if (this.x > this.patrolRight) { this.x = this.patrolRight; this.facing = -1; }
+      if (this.onLadder) {
+        this.climb(dt);
+      } else if (ladder && this.climbCooldown <= 0 && Math.abs(this.x - (ladder.left + ladder.right) / 2) < 12) {
+        this.onLadder = true;
+        this.climbDirection = Math.random() > 0.5 ? -1 : 1;
+        this.climbCooldown = 4 + Math.random() * 4;
+      } else {
+        this.x += this.facing * ENEMY_SPEED * dt;
+        this.setState("Walk");
+        if (this.x <= this.patrolLeft) { this.x = this.patrolLeft; this.facing = 1; }
+        else if (this.x >= this.patrolRight) { this.x = this.patrolRight; this.facing = -1; }
+        else if (ladder && Math.abs(this.x - (ladder.left + ladder.right) / 2) < 10 && this.climbCooldown <= 0 && Math.random() < 0.02) {
+          this.onLadder = true;
+          this.climbDirection = Math.random() > 0.5 ? -1 : 1;
+          this.climbCooldown = 4 + Math.random() * 4;
+        } else if (this.onGround && this.jumpCooldown <= 0 && Math.random() < 0.01) {
+          this.vy = -560; this.onGround = false; this.setState("Jump");
+          this.jumpCooldown = 2.5 + Math.random() * 3;
+        }
+      }
     }
 
-    // Schwerkraft + Landung, identisch zum Helden (Fix für KnownBugs #12)
-    this.vy += GRAVITY * dt;
-    const nextY = this.y + this.vy * dt;
-    const landing = this.findLanding(nextY);
-    if (landing && this.vy >= 0) { this.y = landing.y; this.vy = 0; this.onGround = true; }
-    else { this.y = nextY; this.onGround = false; }
+    if (!this.onLadder) {
+      this.vy += GRAVITY * dt;
+      const nextY = this.y + this.vy * dt;
+      const landing = this.findLanding(nextY);
+      if (landing && this.vy >= 0) {
+        this.y = landing.y; this.vy = 0; this.onGround = true;
+        if (this.state === "Jump") this.setState("Walk");
+      } else { this.y = nextY; this.onGround = false; }
+    }
 
-    // Held angreifen, wenn in Reichweite
+    // Held angreifen, wenn in Reichweite — unterbricht die Bewegung nur ganz
+    // kurz (Angriffsdauer), nicht die gesamte Abklingzeit
     const hero = this.game.hero;
-    if (hero && !hero.game.isHeroDead && this.attackCooldown <= 0) {
+    if (hero && !this.game.isHeroDead && this.attackCooldown <= 0 && !this.onLadder) {
       const dist = Math.hypot(hero.x - this.x, hero.y - this.y);
-      this.facing = hero.x > this.x ? 1 : -1;
+      if (dist < 260) this.facing = hero.x > this.x ? 1 : -1;
       if (dist < 40) {
         this.setState("Hit"); this.attackTimer = 0.3; this.attackCooldown = 1.4 + Math.random();
         hero.takeDamage(1);
@@ -235,6 +267,21 @@ class Enemy {
     }
 
     if (this.attackTimer <= 0 && ["Hit", "SwordHit", "Throw"].includes(this.state)) this.setState("Idle");
+  }
+
+  findNearbyLadder() {
+    return this.game.level.ladders.find(l => Math.abs(this.x - (l.left + l.right) / 2) < 30 && this.y >= l.top - 10 && this.y <= l.bottom + 10);
+  }
+
+  climb(dt) {
+    const ladder = this.findNearbyLadder();
+    if (!ladder) { this.onLadder = false; this.setState("Idle"); return; }
+    this.setState("Climb");
+    this.y += this.climbDirection * CLIMB_SPEED * 0.7 * dt;
+    if (this.y <= ladder.top + 6 || this.y >= ladder.bottom - 6) {
+      this.onLadder = false;
+      this.setState("Idle");
+    }
   }
 
   setState(s) { if (this.state !== s) { this.state = s; this.t = 0; } }
@@ -328,6 +375,8 @@ class PowerUp {
     const name = this.type; // "Heart" | "Sword" | "Shuriken"
     const s = tileSize(name);
     if (!s) return;
-    drawTile(ctx, name, this.x - s.w / 2, this.y - s.h - 2);
+    const scale = 0.55;
+    const w = s.w * scale, h = s.h * scale;
+    drawTile(ctx, name, this.x - w / 2, this.y - h - 2, { scale });
   }
 }

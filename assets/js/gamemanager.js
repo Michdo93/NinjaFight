@@ -35,7 +35,10 @@ function drawLevel(ctx, level) {
 
   level.flames.forEach(f => {
     const frame = Math.floor(performance.now() / 90 + f.x) % 8;
-    drawTile(ctx, "Flame", f.x, f.y, { frame });
+    const scale = 1.3;
+    const size = tileSize("Flame");
+    const dh = size.h * scale;
+    drawTile(ctx, "Flame", f.x - (size.w * scale - f.w) / 2, f.y - dh, { frame, scale });
   });
 
   level.knives.forEach(k => {
@@ -96,8 +99,9 @@ class GameManager {
     this.hero = new Hero(this, 90, GROUND_LEVEL_Y);
     this.enemies = [];
     const enemyType = ["Blue", "Green", "Red", "White"][this.levelNum - 1];
+    const slotWidth = (STAGE_W - 500) / 4;
     for (let i = 0; i < 4; i++) {
-      const x = 400 + Math.random() * 550;
+      const x = 380 + i * slotWidth + Math.random() * slotWidth * 0.6;
       this.enemies.push(new Enemy(this, enemyType, x, GROUND_LEVEL_Y));
     }
     this.powerUps = [];

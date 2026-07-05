@@ -148,6 +148,16 @@ verfügbaren Original-Sprites ist das ohnehin hinfällig — Boden, Wasser,
 Brücke, Leiter und Gefahren sehen exakt wie im Original aus, nicht nur
 farblich angenähert.
 
+## Nachträgliche Korrekturen (nach visuellem Feedback)
+
+| Problem | Ursache | Fix |
+|---------|---------|-----|
+| Ganzes Spielfeld wirkte abgedunkelt, wie durch ein Overlay | Die Basis-Regel `.screen` setzte einen dunklen Verlauf als Hintergrund für **alle** Bildschirme, auch `#screen-game` — der während des Spiels direkt über dem Canvas liegt | `#screen-game { background: none; }` mit hoher ID-Spezifität, damit es nicht mit der `.with-bg`-Regel der Menüs kollidiert |
+| Herz-Pickup wirkte überdimensioniert | PowerUp-Icons wurden in Original-Sprite-Größe (35×30px) statt herunterskaliert gezeichnet | einheitlicher Skalierungsfaktor 0.55 für Heart/Sword/Shuriken-Pickups |
+| Flammen saßen zu tief/wirkten zu klein | `Flame.y` in den Original-Leveldaten entspricht der **Bodenhöhe** (Basis der Flamme), nicht ihrer Oberkante — wurde als Top-Left-Position missverstanden | Flamme wird jetzt mit der Unterkante an `y` verankert (wächst nach oben) und um Faktor 1.3 vergrößert |
+| Keine erkennbare Kletter-Animation auf der Leiter | Das Original hat **keine eigene Climb-Animation** (laut KnownBugs war das Klettern nie vollständig fertig) | ersatzweise werden die Jump-Frames in Dauerschleife verwendet — optisch die am ehesten passende vorhandene Pose |
+| Gegner wirkten wie eingefroren | Patrouillenradius war mit ±70px winzig, Spawn-Positionen konnten sich gegenseitig überlappen | Patrouillenradius auf ±220px erhöht, Spawn-Positionen gleichmäßig über die Levelbreite verteilt, außerdem gelegentliches Klettern und Springen während der Patrouille ergänzt |
+
 ## Notwendige Anpassungen für GitHub Pages
 
 - **Server-Highscore → `localStorage`.** Das Original schickte Highscores

@@ -47,7 +47,10 @@ function buildLevel(levelNum) {
     } else if (el.type === "Ladder") {
       ladders.push({ x: el.x, y: el.y, w: LADDER_W, h: TILE_H + 8 });
     } else if (el.type === "Flame") {
-      flames.push({ x: el.x, y: el.y, w: HAZARD_SIZE, h: HAZARD_SIZE + 8 });
+      // Original-Leveldaten zeigen: Flame.y entspricht der Bodenhöhe (der
+      // Basis der Flamme), nicht ihrer Oberkante — die Flamme steigt vom
+      // Boden nach OBEN, nicht umgekehrt (siehe Bugfix-Notiz in der README)
+      flames.push({ x: el.x, y: el.y, w: HAZARD_SIZE + 4, h: HAZARD_SIZE + 14 });
     } else if (el.type === "Knives") {
       knives.push({ x: el.x, y: el.y, w: HAZARD_SIZE, h: HAZARD_SIZE });
     }
@@ -128,14 +131,19 @@ function imageForType(type) {
 
 // entspricht doAction()/gotoAndPlay(label) im Original: waehlt anhand des
 // Animationszustands und der verstrichenen Zeit den passenden Frame aus
-// der jeweiligen Zeile des Sprite-Sheets
+// der jeweiligen Zeile des Sprite-Sheets.
+// "Climb" existiert im Original NICHT als eigene Animation (das Klettern
+// war laut KnownBugs nie fertig implementiert) — hier ersatzweise die
+// Jump-Frames in Dauerschleife, das liegt optisch am naechsten an einer
+// Kletterbewegung (siehe README).
 function drawNinja(ctx, x, y, facing, type, state, t) {
   const img = imageForType(type);
   if (!img.complete || img.naturalWidth === 0) return;
 
-  const def = CHARACTER_SHEET.states[state] || CHARACTER_SHEET.states.Idle;
-  const fps = state === "Idle" ? 6 : state === "Walk" ? 12 : 14;
-  const loopStates = new Set(["Idle", "Walk"]);
+  const spriteState = state === "Climb" ? "Jump" : state;
+  const def = CHARACTER_SHEET.states[spriteState] || CHARACTER_SHEET.states.Idle;
+  const fps = state === "Idle" ? 6 : state === "Walk" ? 12 : state === "Climb" ? 7 : 14;
+  const loopStates = new Set(["Idle", "Walk", "Climb"]);
   let frame = Math.floor(t * fps);
   frame = loopStates.has(state) ? frame % def.count : Math.min(frame, def.count - 1);
 
