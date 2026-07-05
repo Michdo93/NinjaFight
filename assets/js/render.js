@@ -31,7 +31,7 @@ const SKIP_TYPES = new Set(["Bottom", "WaterTop"]); // rein dekorativ, keine eig
 /* jetzt den tatsaechlichen Sprite-Massen (siehe spritedata.js).          */
 /* ==================================================================== */
 function buildLevel(levelNum) {
-  const raw = LEVELS[levelNum] || [];
+  const raw = LEVELS[levelNum] || generateLevel(levelNum);
   const platforms = [];
   const ladders = [];
   const flames = [];

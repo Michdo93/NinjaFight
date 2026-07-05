@@ -54,7 +54,7 @@ class GameManager {
     this.sound = sound;
     this.level = null;
     this.levelNum = 0;
-    this.maxLevels = 4;
+    this.maxLevels = 10;
     this.points = 0;
     this.lifeEnergy = 0;
     this.hero = null;
@@ -77,6 +77,7 @@ class GameManager {
     this.points = 0;
     this.paused = false;
     this.isHeroDead = false;
+    this.hero = null; // frisches Spiel, keine Waffen aus einem vorigen Durchlauf übernehmen
     this.nextLevel();
     ui.showScreen("game");
     this.sound.playGameMusic();
@@ -86,6 +87,13 @@ class GameManager {
   }
 
   nextLevel() {
+    // Gesammeltes Schwert/Shuriken müssen VOR dem Aufräumen gesichert
+    // werden — cleanUpLevel() setzt this.hero sofort auf null (Bugfix:
+    // vorher wurden die Werte danach gelesen und waren immer schon weg)
+    const carryHasSword = this.hero ? this.hero.hasSword : false;
+    const carryHasShuriken = this.hero ? this.hero.hasShuriken : false;
+    const carryShurikenCount = this.hero ? this.hero.shurikenCount : 0;
+
     this.cleanUpLevel();
 
     if (this.levelNum >= this.maxLevels) { this.endGame(); return; }
@@ -94,14 +102,27 @@ class GameManager {
 
     this.level = buildLevel(this.levelNum);
     this.lifeEnergy = 10 * this.levelNum;
-    this.timeLeft = 120 * this.levelNum;
+    // Original-Formel (120s * Level) nur für die vier Original-Level
+    // beibehalten — sonst würde Level 10 zu einer 20-Minuten-Marathon-Runde
+    this.timeLeft = this.levelNum <= 4 ? 120 * this.levelNum : 480 + 40 * (this.levelNum - 4);
 
     this.hero = new Hero(this, 90, GROUND_LEVEL_Y);
+    this.hero.hasSword = carryHasSword;
+    this.hero.hasShuriken = carryHasShuriken;
+    this.hero.shurikenCount = carryShurikenCount;
     this.enemies = [];
-    const enemyType = ["Blue", "Green", "Red", "White"][this.levelNum - 1];
-    const slotWidth = (STAGE_W - 500) / 4;
-    for (let i = 0; i < 4; i++) {
+
+    // Level 1–4: ein Gegnertyp pro Level (Original-Aufteilung), je 4 Gegner.
+    // Level 5–10: gemischte Gegnertypen, unterschiedliche Anzahl pro Level.
+    const ENEMY_COUNT_BY_LEVEL = { 5: 5, 6: 6, 7: 5, 8: 7, 9: 6, 10: 8 };
+    const allTypes = ["Blue", "Green", "Red", "White"];
+    const numEnemies = this.levelNum <= 4 ? 4 : (ENEMY_COUNT_BY_LEVEL[this.levelNum] || 6);
+    const slotWidth = (STAGE_W - 500) / numEnemies;
+    for (let i = 0; i < numEnemies; i++) {
       const x = 380 + i * slotWidth + Math.random() * slotWidth * 0.6;
+      const enemyType = this.levelNum <= 4
+        ? ["Blue", "Green", "Red", "White"][this.levelNum - 1]
+        : allTypes[Math.floor(Math.random() * allTypes.length)];
       this.enemies.push(new Enemy(this, enemyType, x, GROUND_LEVEL_Y));
     }
     this.powerUps = [];

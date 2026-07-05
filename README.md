@@ -169,6 +169,15 @@ farblich angenähert.
 | Schwert nicht sichtbar, wenn getragen (nur bei Angriff) | Im Original zeigt nur die SwordHit-Animation selbst das Schwert. Für Idle/Walk/Jump wird jetzt ein kleines Schwert-Sprite schräg auf dem Rücken ergänzt (`showSheathed` in `drawNinja()`), solange `hasSword` gesetzt ist und keine Angriffsanimation läuft — gilt für Helden und Gegner gleichermaßen |
 | Gegner sollen Items einsammeln können | `PowerUp.update()` prüft jetzt alle Charaktere (Held **und** alle lebenden Gegner) auf Kollision, nicht mehr nur den Helden — wer zuerst da ist, bekommt das Item. Gegner haben dafür eine eigene `collectPowerUp()`-Methode (Heart heilt, Sword/Shuriken schalten die jeweilige Fähigkeit frei) |
 
+## Dritte Feedback-Runde: 10 Level + weitere Fixes
+
+| Wunsch/Problem | Umsetzung |
+|-----------------|-----------|
+| Lebensbalken saß im Kopf statt darüber | Sprite-Anchor genauer vermessen (Kopf-Oberkante liegt bei `y − 61px`, nicht bei der Trefferbox-Höhe) — Balken jetzt bei `y − 70px`, klar über dem Kopf |
+| Level endete nicht früher, wenn kein Gegner mehr da war | Zwei Ursachen behoben: (1) Gegner, die von der Karte fallen, gelten jetzt als besiegt (`onEnemyKilled()` wird ausgelöst); (2) zusätzliche Sicherheit — fällt ein Gegner länger als 3s ununterbrochen (z. B. in eine nicht erreichbare Vertiefung), gilt er ebenfalls als besiegt |
+| Schwert/Shuriken gingen bei Levelwechsel verloren | **Echter Bug gefunden:** `cleanUpLevel()` setzte `this.hero = null`, *bevor* der Waffenstatus für die Übernahme ins nächste Level ausgelesen wurde — die Werte waren dadurch immer schon weg. Jetzt wird der Status vor dem Aufräumen gesichert |
+| Nur 4 Level | **6 neue Level ergänzt (jetzt 10 insgesamt).** Level 5–10 sind neu von Hand entworfen (keine Original-FLA-Daten dafür vorhanden), mit Feuer, Leitern, Stacheln und Wassergräben, jeweils vollständig begehbarem Boden (automatisiert geprüft). Ab Level 5 sind die Gegnertypen **gemischt** (zufällig aus Blue/Green/Red/White gewählt), Level 1–4 bleiben bei ihrem Original-Einzeltyp. Gegneranzahl pro Level unterschiedlich: 5, 6, 5, 7, 6, 8 |
+
 ## Notwendige Anpassungen für GitHub Pages
 
 - **Server-Highscore → `localStorage`.** Das Original schickte Highscores

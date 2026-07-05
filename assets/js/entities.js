@@ -250,10 +250,18 @@ class Enemy {
       const nextY = this.y + this.vy * dt;
       const landing = this.findLanding(nextY);
       if (landing && this.vy >= 0) {
-        this.y = landing.y; this.vy = 0; this.onGround = true;
+        this.y = landing.y; this.vy = 0; this.onGround = true; this.fallTime = 0;
         if (this.state === "Jump") this.setState("Walk");
-      } else { this.y = nextY; this.onGround = false; }
+      } else { this.y = nextY; this.onGround = false; this.fallTime = (this.fallTime || 0) + dt; }
+    } else {
+      this.fallTime = 0;
     }
+
+    // fällt ein Gegner von der Karte (oder bleibt zu lange im Sturz, weil
+    // er in einer nicht mehr erreichbaren Vertiefung landet), gilt er als
+    // besiegt — sonst wartet man auf einen Gegner, der gar nicht mehr im
+    // Spiel ist (Bugfix)
+    if (this.y > STAGE_H + 80 || this.fallTime > 3) { this.dead = true; this.game.onEnemyKilled(this); return; }
 
     // Held angreifen, wenn in Reichweite — unterbricht die Bewegung nur ganz
     // kurz (Angriffsdauer), nicht die gesamte Abklingzeit
@@ -324,7 +332,7 @@ class Enemy {
   draw(ctx) {
     if (this.dead) return;
     drawNinja(ctx, this.x, this.y, this.facing, this.type, this.state, this.t, this.hasSword);
-    drawHealthBar(ctx, this.x, this.y - this.height - 10, this.hp, this.maxHp);
+    drawHealthBar(ctx, this.x, this.y - 70, this.hp, this.maxHp);
   }
 }
 
