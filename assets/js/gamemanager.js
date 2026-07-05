@@ -23,62 +23,23 @@ function drawLevel(ctx, level) {
     ctx.fillStyle = "#bfe8ea"; ctx.fillRect(0, 0, STAGE_W, STAGE_H);
   }
 
-  // Original-Farben, per Pixelanalyse aus den exportierten Spiel-Frames
-  // bestätigt: dunkles Erdbraun mit hellgrünem Grasrand, khakifarbene
-  // Seilbrücke, kräftiges Himmelblau fürs Wasser (siehe README).
+  // Original-Kachelgrafiken, per Sprite-Sheet aus der decompilierten SWF
+  // (siehe spritedata.js / render.js für die Herkunft)
   level.platforms.forEach(p => {
-    if (p.type === "WaterGround") {
-      ctx.fillStyle = "#58b8f3";
-      ctx.fillRect(p.x, p.y, p.w, p.h + 14);
-      ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + p.w, p.y); ctx.stroke();
-    } else if (p.type === "Bridge") {
-      ctx.fillStyle = "#9f7048";
-      ctx.fillRect(p.x, p.y + p.h - 5, p.w, 5);
-      ctx.fillStyle = "#c2a373";
-      for (let i = 4; i < p.w; i += 9) { ctx.beginPath(); ctx.arc(p.x + i, p.y + p.h - 2, 3, 0, Math.PI * 2); ctx.fill(); }
-    } else if (p.type === "Small") {
-      ctx.fillStyle = "#663300";
-      ctx.fillRect(p.x, p.y, p.w, p.h);
-      ctx.fillStyle = "#80e49a";
-      ctx.fillRect(p.x, p.y, p.w, 4);
-    } else {
-      ctx.fillStyle = "#663300";
-      ctx.fillRect(p.x, p.y, p.w, p.h);
-      ctx.fillStyle = "#845232";
-      ctx.fillRect(p.x, p.y + p.h - 3, p.w, 3);
-      ctx.fillStyle = "#80e49a";
-      ctx.fillRect(p.x, p.y, p.w, 4);
-    }
+    drawTile(ctx, p.type, p.x, p.y);
   });
 
   level.ladders.forEach(l => {
-    ctx.fillStyle = "#845232";
-    ctx.fillRect(l.left, l.top, l.right - l.left, l.bottom - l.top);
-    ctx.strokeStyle = "#663300"; ctx.lineWidth = 2;
-    for (let y = l.top + 6; y < l.bottom; y += 10) { ctx.beginPath(); ctx.moveTo(l.left + 2, y); ctx.lineTo(l.right - 2, y); ctx.stroke(); }
+    for (let y = l.top; y < l.bottom; y += 24) drawTile(ctx, "Ladder", l.left, y);
   });
 
   level.flames.forEach(f => {
-    const flick = 0.7 + Math.sin(performance.now() / 90 + f.x) * 0.3;
-    ctx.fillStyle = `rgba(255,${100 + flick * 80},60,0.95)`;
-    ctx.beginPath();
-    ctx.moveTo(f.x + f.w / 2, f.y - 4);
-    ctx.quadraticCurveTo(f.x + f.w, f.y + f.h * 0.4, f.x + f.w / 2, f.y + f.h);
-    ctx.quadraticCurveTo(f.x, f.y + f.h * 0.4, f.x + f.w / 2, f.y - 4);
-    ctx.fill();
+    const frame = Math.floor(performance.now() / 90 + f.x) % 8;
+    drawTile(ctx, "Flame", f.x, f.y, { frame });
   });
 
   level.knives.forEach(k => {
-    ctx.fillStyle = "#4a5a60";
-    for (let i = 0; i < 4; i++) {
-      ctx.beginPath();
-      ctx.moveTo(k.x + i * 7, k.y + k.h);
-      ctx.lineTo(k.x + i * 7 + 3.5, k.y);
-      ctx.lineTo(k.x + i * 7 + 7, k.y + k.h);
-      ctx.closePath(); ctx.fill();
-    }
-    ctx.strokeStyle = "#8b95a3"; ctx.lineWidth = 1; ctx.stroke();
+    drawTile(ctx, "Knives", k.x, k.y);
   });
 }
 

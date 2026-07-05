@@ -287,8 +287,8 @@ class Projectile {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.spin);
-    ctx.fillStyle = SWORD_BLADE;
-    drawStar(ctx, 0, 0, 8);
+    const s = tileSize("Shuriken");
+    drawTile(ctx, "Shuriken", -s.w / 2, -s.h / 2);
     ctx.restore();
   }
 }
@@ -325,24 +325,9 @@ class PowerUp {
   }
   draw(ctx) {
     if (this.collected) return;
-    ctx.save();
-    ctx.translate(this.x, this.y - 14);
-    if (this.type === "Heart") {
-      ctx.fillStyle = "#ff6b6b";
-      ctx.beginPath();
-      ctx.moveTo(0, 6);
-      ctx.bezierCurveTo(-14, -8, -14, -16, 0, -10);
-      ctx.bezierCurveTo(14, -16, 14, -8, 0, 6);
-      ctx.fill();
-    } else if (this.type === "Sword") {
-      ctx.strokeStyle = SWORD_BLADE; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(0, -14); ctx.lineTo(0, 10); ctx.stroke();
-      ctx.strokeStyle = SWORD_HILT; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(-8, -8); ctx.lineTo(8, -8); ctx.stroke();
-    } else if (this.type === "Shuriken") {
-      ctx.fillStyle = SWORD_BLADE;
-      drawStar(ctx, 0, -4, 10);
-    }
-    ctx.restore();
+    const name = this.type; // "Heart" | "Sword" | "Shuriken"
+    const s = tileSize(name);
+    if (!s) return;
+    drawTile(ctx, name, this.x - s.w / 2, this.y - s.h - 2);
   }
 }

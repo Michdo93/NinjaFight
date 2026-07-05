@@ -34,32 +34,51 @@ statt sie unverändert zu übernehmen.
 | Sprachdaten (Englisch/Deutsch) | `ExternalData/strings.json`, unverändert | `assets/js/strings.js` |
 | Sounds | `Sounds/*.mp3`, unverändert | `assets/sounds/` |
 | Menü-Hintergrund | eingebettetes PNG aus der FLA-Bibliothek (`GUI/GUIComponent/background.png`) | `assets/img/background.png` |
+| **Charakter-Animationen** (Held + 4 Gegnertypen) | **echte gerenderte Frames aus einem SWF-Decompiler (JPEXS FFDec)** | `assets/img/sprites/{hero,blue,green,red,white}.png` |
+| **Level-Elemente & Items** (Floor, Bridge, Ladder, Knives, Flame, Sword, Shuriken, Heart) | ebenfalls aus dem Decompiler-Export | `assets/img/sprites/tiles.png` |
 
-**Nicht 1:1 übernommen werden konnten** die eigentlichen Charakter- und
-Umgebungsgrafiken selbst — sie liegen als verschachtelte Vektor-Bodyparts
-(Kopf/Rumpf/Arme/Beine als separate Animate-Symbole, jeweils mit vielen
-Tween-Zwischenschritten pro Animation) vor, keine einfachen Bilddateien.
-Eine vollständige Rekonstruktion hätte einen eigenen XFL-Vektor-Renderer
-erfordert. Stattdessen wurden die **echten Fill-Farben** aus
-`BodyPart/{Head,Torso,Sword}.xml` für jede Figur extrahiert
-(`<SolidColor color="#...">`-Werte) und für eine originalgetreue Farbgebung
-verwendet:
+### Von der Farbpalette zu echten Sprites
 
-| Figur | Anzugfarbe (Torso) | Besatz/Sash | aus |
-|-------|---------------------|-------------|-----|
-| Held | `#333333` (Dunkelgrau) | `#C00E0E` (Rot) | `Hero/BodyPart/Torso.xml` |
-| Enemy Blue | `#003399` (Blau) | `#FFFFFF` (Weiß) | `Enemy/Blue/BodyPart/Torso.xml` |
-| Enemy Green | `#FFCC00` (Gelb) | `#006600` (Grün) | `Enemy/Green/BodyPart/Torso.xml` |
-| Enemy Red | `#CC0000` (Rot) | `#3B3B3B` (Dunkelgrau) | `Enemy/Red/BodyPart/Torso.xml` |
-| Enemy White | `#0066FF` (Blau) | `#FFFFFF` (Weiß) | `Enemy/White/BodyPart/Torso.xml` |
+In einer früheren Fassung dieser Portierung gab es keinen Zugriff auf die
+eigentlichen Grafikdaten — nur auf die FLA-Quelldatei, in der die Figuren
+als verschachtelte Vektor-Bodyparts ohne fertig gerenderte Bilder vorlagen.
+Die Lösung damals: die echten Fill-Farben aus den Shape-Definitionen
+extrahieren und eine eigene, prozedural gezeichnete Strichfigur einfärben.
 
-Das rote Kopfband (`#C00E0E`) und der Hautton (`#D2AD81`) sind bei **allen**
-Figuren identisch — offenbar ein figurenübergreifendes Clan-Symbol statt
-einer Fraktionsfarbe. Auch die Schwertfarben (Silberklinge `#CCCCCC`,
-goldener Griff `#FFCC66`) wurden 1:1 aus `BodyPart/Sword.xml` übernommen
-und sind bei jeder Figur identisch. Die grobe Silhouette (Rumpf schulterbreit
-und taillenschmal, Kopf breiter als hoch) wurde an die tatsächliche
-Bounding-Box der Original-Formen angenähert.
+Mit einem **Decompiler-Export der SWF** (`decompiled.zip`, per JPEXS FFDec)
+änderte sich das grundlegend: FFDec rendert für jede `DefineSprite`
+(= jedes MovieClip-Symbol) jeden einzelnen Frame als fertiges PNG. Für den
+Helden allein ergab das **465 Einzelbilder** — jede Pose jeder Animation,
+pixelgenau wie im Original. Die Frame-Grenzen pro Animationszustand
+(Idle/Walk/Jump/Hit/Kick/Throw/Die/SwordHit) wurden aus den Frame-Labels in
+`LIBRARY/Character/Hero/Hero.xml` ausgelesen (z. B. `index="57" duration="51"
+name="Jump"`) — identisch für alle vier Gegnertypen.
+
+**Verarbeitungspipeline** (siehe Build-Historie, nicht Teil des Repos):
+
+1. Pro Figur (Hero, Blue, Green, Red, White) und pro Zustand 8 Frames
+   gleichmäßig aus dem jeweiligen Original-Bereich abgetastet (465 Frames
+   pro Figur wären für ein kleines Web-Spiel unnötig groß — 8 pro Zustand
+   reichen für eine flüssige Wirkung).
+2. Jeder Frame auf ein einheitliches 160×150-Fenster zugeschnitten (deckt
+   alle beobachteten Posen sicher ab).
+3. Alle Frames einer Figur zu **einem** Sprite-Sheet zusammengefügt
+   (8 Spalten × 8 Zeilen, eine Zeile pro Zustand) — ein Bild pro Figur statt
+   Hunderter Einzeldateien, deutlich weniger HTTP-Requests.
+4. Level-Elemente und Items (die meist nur 1 Frame haben, außer Flame mit
+   37 Animationsframes) ebenso in ein gemeinsames `tiles.png` gepackt.
+
+Ergebnis: 5 Charakter-Sheets (je 150–200 KB) + 1 Kachel-Sheet (15 KB) statt
+einer selbst gezeichneten Näherung — die Figuren sehen jetzt exakt so aus
+wie im Original, inklusive des tatsächlichen Kopfbands, der Maskenfarbe und
+der Statur.
+
+Die "2"-Varianten aus dem Original (`Idle2`, `Walk2`, … — vermutlich
+gespiegelte Versionen für die andere Blickrichtung) wurden bewusst **nicht**
+übernommen: `SwordHit` existierte im Original ohnehin nur in einer Richtung,
+daher wird hier durchgängig ein einfacher horizontaler Canvas-Flip
+(`ctx.scale(facing, 1)`) für die Blickrichtung verwendet — konsistent für
+alle Zustände und mit halb so vielen Bilddaten.
 
 ## Architektur
 
@@ -71,13 +90,19 @@ Bounding-Box der Original-Formen angenähert.
 │   ├── js/
 │   │   ├── levels.js             extrahierte Original-Leveldaten
 │   │   ├── strings.js            Original-Sprachdaten (EN/DE)
-│   │   ├── render.js             Ninja-Figur zeichnen (ersetzt die Vektor-Bodyparts)
+│   │   ├── spritedata.js         Sprite-Sheet-Manifest (welcher Frame liegt wo)
+│   │   ├── render.js             Konstanten, Level-Aufbau, Sound, Sprite-Zeichnen
 │   │   ├── entities.js           Hero, Enemy, PowerUp, Projectile
 │   │   ├── gamemanager.js        Spiellogik, Level-Aufbau, Game-Loop
 │   │   ├── ui.js                 Menüs, Einstellungen, Highscore
 │   │   └── main.js               Boot
 │   ├── sounds/*.mp3               Original-Audiodateien
-│   └── img/background.png         Original-Hintergrundbild
+│   └── img/
+│       ├── background.png         Original-Hintergrundbild
+│       └── sprites/
+│           ├── hero.png, blue.png, green.png, red.png, white.png
+│           │    (je 64 echte Original-Frames: 8 Zustände × 8 Posen)
+│           └── tiles.png          Level-Elemente & Items (inkl. animiertes Feuer)
 └── README.md
 ```
 
@@ -112,30 +137,16 @@ nie griff. In dieser Portierung sperrt `Hero.setState()` korrekt: eine
 laufende Angriffs-/Sprunganimation kann nicht durch Bewegung unterbrochen
 werden (mit Tests verifiziert, siehe unten).
 
-## Original-Farbpalette bestätigt
+## Original-Farbwelt bestätigt
 
-Ein Export der ersten Zeitleisten-Frames aus der SWF zeigte zwar nur die
-Menü-Bildschirme, aber einer davon (ein Level-Vorschaubild mit HUD) verrät
-die tatsächliche Spielfarbwelt — deutlich heller und freundlicher als eine
-ursprüngliche Fassung dieser Portierung, die versehentlich eine dunkle
-Nacht-Optik verwendete. Per Pixelanalyse wurden folgende Original-Farben
-bestätigt und übernommen:
-
-| Element | Farbe | Hex |
-|---------|-------|-----|
-| Himmel/Hintergrund | helles Blau-Grün (Wald/Berge) | aus `background.png` |
-| Boden/Plattform (Erde) | dunkles Braun | `#663300` |
-| Grasrand auf Plattformen | kräftiges Grün | `#80e49a` |
-| Seilbrücke | Khaki/Tan | `#9f7048` |
-| Wasser | kräftiges Himmelblau | `#58b8f3` |
-| Messer/Spikes | Blaugrau-Metall | `#4a5a60` |
-| Leiter | mittleres Braun | `#845232` |
-
-Wichtigste Erkenntnis dabei: Laut den Original-Leveldaten
-(`Level1..4.xml`) ist die `GUI/GUIComponent/Background`-Grafik (dasselbe
-helle Wald-Hintergrundbild wie im Hauptmenü) das **erste Element in jedem
-einzelnen Level** — das Spiel spielt tagsüber vor derselben freundlichen
-Kulisse wie die Menüs, nicht nachts.
+Das Spiel spielt tagsüber vor einer freundlichen Wald-/Berg-Kulisse — nicht
+nachts, wie eine frühere Fassung dieser Portierung versehentlich annahm.
+Laut den Original-Leveldaten (`Level1..4.xml`) ist die
+`GUI/GUIComponent/Background`-Grafik (dasselbe helle Hintergrundbild wie im
+Hauptmenü) das **erste Element in jedem einzelnen Level**. Mit den jetzt
+verfügbaren Original-Sprites ist das ohnehin hinfällig — Boden, Wasser,
+Brücke, Leiter und Gefahren sehen exakt wie im Original aus, nicht nur
+farblich angenähert.
 
 ## Notwendige Anpassungen für GitHub Pages
 
