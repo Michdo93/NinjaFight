@@ -218,6 +218,7 @@ class GameManager {
     this.powerUps = this.powerUps.filter(p => !p.collected);
 
     ui.updateHudTime(this.timeLeft);
+    ui.updateHud(this);
   }
 
   render() {

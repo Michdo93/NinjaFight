@@ -158,6 +158,17 @@ farblich angenähert.
 | Keine erkennbare Kletter-Animation auf der Leiter | Das Original hat **keine eigene Climb-Animation** (laut KnownBugs war das Klettern nie vollständig fertig) | ersatzweise werden die Jump-Frames in Dauerschleife verwendet — optisch die am ehesten passende vorhandene Pose |
 | Gegner wirkten wie eingefroren | Patrouillenradius war mit ±70px winzig, Spawn-Positionen konnten sich gegenseitig überlappen | Patrouillenradius auf ±220px erhöht, Spawn-Positionen gleichmäßig über die Levelbreite verteilt, außerdem gelegentliches Klettern und Springen während der Patrouille ergänzt |
 
+## Weitere Ergänzungen (zweite Feedback-Runde)
+
+| Wunsch/Problem | Umsetzung |
+|-----------------|-----------|
+| Shuriken-Anzahl im HUD sichtbar machen | neues HUD-Feld `#hud-weapons` zeigt Shuriken-Anzahl (✦) und ob ein Schwert getragen wird (🗡) |
+| Lebensanzeige über Gegnern | `drawHealthBar()` in `render.js` — schmaler grün/orange/rot abnehmender Balken über jedem Gegnerkopf |
+| Leiter: am oberen/unteren Ende nicht normal weiterlaufen können | Kletterlogik komplett neu geschrieben: Klettern greift nur, solange ausschließlich hoch/runter gedrückt wird — sobald links/rechts gedrückt wird, wird die Leiter sofort verlassen und normale Bewegung/Schwerkraft greift wieder |
+| Keine Kletter-Sprites | Das Original hat keine eigene Climb-Animation (nie fertiggestellt) — ersatzweise laufen die Jump-Frames in Dauerschleife während des Kletterns |
+| Schwert nicht sichtbar, wenn getragen (nur bei Angriff) | Im Original zeigt nur die SwordHit-Animation selbst das Schwert. Für Idle/Walk/Jump wird jetzt ein kleines Schwert-Sprite schräg auf dem Rücken ergänzt (`showSheathed` in `drawNinja()`), solange `hasSword` gesetzt ist und keine Angriffsanimation läuft — gilt für Helden und Gegner gleichermaßen |
+| Gegner sollen Items einsammeln können | `PowerUp.update()` prüft jetzt alle Charaktere (Held **und** alle lebenden Gegner) auf Kollision, nicht mehr nur den Helden — wer zuerst da ist, bekommt das Item. Gegner haben dafür eine eigene `collectPowerUp()`-Methode (Heart heilt, Sword/Shuriken schalten die jeweilige Fähigkeit frei) |
+
 ## Notwendige Anpassungen für GitHub Pages
 
 - **Server-Highscore → `localStorage`.** Das Original schickte Highscores

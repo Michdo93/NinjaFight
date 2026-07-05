@@ -136,7 +136,7 @@ function imageForType(type) {
 // war laut KnownBugs nie fertig implementiert) — hier ersatzweise die
 // Jump-Frames in Dauerschleife, das liegt optisch am naechsten an einer
 // Kletterbewegung (siehe README).
-function drawNinja(ctx, x, y, facing, type, state, t) {
+function drawNinja(ctx, x, y, facing, type, state, t, hasSword) {
   const img = imageForType(type);
   if (!img.complete || img.naturalWidth === 0) return;
 
@@ -154,6 +154,23 @@ function drawNinja(ctx, x, y, facing, type, state, t) {
   const anchorX = CHARACTER_SHEET.anchorX * SPRITE_SCALE;
   const anchorY = CHARACTER_SHEET.anchorY * SPRITE_SCALE;
 
+  // Ein mitgeführtes Schwert ist im Original nur während der eigentlichen
+  // Angriffsanimation Teil der Grafik — es gibt keine "Idle mit Schwert
+  // auf dem Rücken"-Frames. Damit man trotzdem sieht, dass man (oder ein
+  // Gegner) eines besitzt, wird es hier als kleines Extra-Sprite auf dem
+  // Rücken ergänzt, außer während SwordHit/Throw (da zeigt die Original-
+  // Animation die Waffe bereits selbst in der Hand).
+  const showSheathed = hasSword && !["SwordHit", "Throw", "Die"].includes(state);
+  if (showSheathed) {
+    const swScale = 0.32;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(facing, 1);
+    ctx.rotate((22 * Math.PI) / 180);
+    drawTile(ctx, "Sword", -6, -dh * 0.62, { scale: swScale });
+    ctx.restore();
+  }
+
   ctx.save();
   ctx.translate(x, y);
   ctx.scale(facing, 1);
@@ -161,6 +178,20 @@ function drawNinja(ctx, x, y, facing, type, state, t) {
     img, sx, sy, CHARACTER_SHEET.cellW, CHARACTER_SHEET.cellH,
     -anchorX, -anchorY, dw, dh
   );
+  ctx.restore();
+}
+
+// kleiner grün/rot abnehmender Lebensbalken über Gegnerköpfen
+function drawHealthBar(ctx, x, y, hp, maxHp) {
+  const w = 30, h = 4;
+  const pct = Math.max(0, hp / maxHp);
+  ctx.save();
+  ctx.fillStyle = "rgba(5,7,10,0.7)";
+  ctx.fillRect(x - w / 2 - 1, y - 1, w + 2, h + 2);
+  ctx.fillStyle = "#3a1010";
+  ctx.fillRect(x - w / 2, y, w, h);
+  ctx.fillStyle = pct > 0.5 ? "#5fe07a" : pct > 0.25 ? "#ffb84d" : "#ff5555";
+  ctx.fillRect(x - w / 2, y, w * pct, h);
   ctx.restore();
 }
 

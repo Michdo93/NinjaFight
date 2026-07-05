@@ -79,20 +79,23 @@ class Hero {
     const k = this.game.keys;
     if (this.state === "Die") { this.y += 40 * dt; return; }
 
-    this.moveHorizontal(dt);
+    // Leiter-Erkennung (Fix für KnownBugs #1 "Leiter funktioniert nicht").
+    // Klettern greift nur, solange ausschließlich hoch/runter gedrückt wird
+    // — sobald links/rechts gedrückt wird (oder oben/unten losgelassen),
+    // verlässt die Figur die Leiter sofort und läuft normal weiter (Fix
+    // für "am Ende der Leiter nicht normal weiterlaufen können").
+    const ladderZone = this.game.level.ladders.find(l => this.x > l.left - 4 && this.x < l.right + 4 && this.y > l.top - 6 && this.y < l.bottom + 6);
+    const wantsToClimb = ladderZone && (k.up || k.down) && !k.left && !k.right;
 
-    // Leiter-Erkennung (Fix für KnownBugs #1 "Leiter funktioniert nicht")
-    const ladder = this.game.level.ladders.find(l => this.x > l.left && this.x < l.right && this.y > l.top && this.y < l.bottom + 10);
-    this.onLadder = !!ladder && (k.up || k.down || this._wasClimbing);
-    if (ladder && (k.up || k.down)) {
-      this._wasClimbing = true;
+    if (wantsToClimb) {
+      this.onLadder = true;
       this.vy = 0;
       this.y += (k.up ? -1 : 1) * CLIMB_SPEED * dt;
-      this.y = clamp(this.y, ladder.top + 10, ladder.bottom);
-      this.setState(k.up || k.down ? "Climb" : "Idle");
+      this.y = clamp(this.y, ladderZone.top, ladderZone.bottom);
+      this.setState("Climb");
     } else {
-      if (this._wasClimbing && this.state === "Climb") this.setState("Idle");
-      this._wasClimbing = false;
+      this.onLadder = false;
+      this.moveHorizontal(dt);
     }
 
     if (!this.onLadder) {
@@ -161,7 +164,7 @@ class Hero {
     this.game.sound.playCollect();
   }
 
-  draw(ctx) { drawNinja(ctx, this.x, this.y, this.facing, "Hero", this.state, this.t); }
+  draw(ctx) { drawNinja(ctx, this.x, this.y, this.facing, "Hero", this.state, this.t, this.hasSword); }
 }
 
 /* ==================================================================== */
@@ -187,6 +190,10 @@ class Enemy {
     this.state = "Idle";
     this.t = 0;
     this.hp = 3;
+    this.maxHp = 3;
+    this.hasSword = this.def.canSword; // startet ggf. schon bewaffnet, kann zusätzlich Items stehlen
+    this.hasShuriken = this.def.canShuriken;
+    this.shurikenCount = this.def.canShuriken ? 99 : 0;
     this.dead = false;
     this.width = 24; this.height = 48;
     // deutlich groesserer Streifraum, damit die Gegner sich wirklich ueber
@@ -257,10 +264,12 @@ class Enemy {
       if (dist < 40) {
         this.setState("Hit"); this.attackTimer = 0.3; this.attackCooldown = 1.4 + Math.random();
         hero.takeDamage(1);
-      } else if (dist < 260 && this.def.canShuriken && Math.random() < 0.5) {
+      } else if (dist < 260 && this.hasShuriken && this.shurikenCount > 0 && Math.random() < 0.5) {
         this.setState("Throw"); this.attackTimer = 0.3; this.attackCooldown = 2 + Math.random() * 1.5;
         this.game.spawnProjectile(this.x + this.facing * 18, this.y - 30, this.facing, "enemy");
-      } else if (dist < 60 && this.def.canSword) {
+        this.shurikenCount--;
+        if (this.shurikenCount <= 0) this.hasShuriken = false;
+      } else if (dist < 60 && this.hasSword) {
         this.setState("SwordHit"); this.attackTimer = 0.3; this.attackCooldown = 1.6 + Math.random();
         hero.takeDamage(2);
       }
@@ -303,7 +312,20 @@ class Enemy {
     if (this.hp <= 0) { this.dead = true; this.game.onEnemyKilled(this); }
   }
 
-  draw(ctx) { if (!this.dead) drawNinja(ctx, this.x, this.y, this.facing, this.type, this.state, this.t); }
+  // Gegner können Items ebenso einsammeln wie der Held — und sie ihm so
+  // vor der Nase wegschnappen
+  collectPowerUp(type) {
+    if (type === "Heart") this.hp = Math.min(this.maxHp, this.hp + 1);
+    else if (type === "Sword") this.hasSword = true;
+    else if (type === "Shuriken") { this.hasShuriken = true; this.shurikenCount += 3; }
+    this.game.sound.playCollect();
+  }
+
+  draw(ctx) {
+    if (this.dead) return;
+    drawNinja(ctx, this.x, this.y, this.facing, this.type, this.state, this.t, this.hasSword);
+    drawHealthBar(ctx, this.x, this.y - this.height - 10, this.hp, this.maxHp);
+  }
 }
 
 /* ==================================================================== */
@@ -365,9 +387,17 @@ class PowerUp {
       if (landing != null) { this.y = landing; this.vy = 0; this.landed = true; }
       else this.y = nextY;
     }
-    if (game.hero && Math.hypot(game.hero.x - this.x, game.hero.y - 20 - this.y) < 26) {
-      this.collected = true;
-      game.hero.collectPowerUp(this.type);
+    // jeder Charakter kann ein Item einsammeln — auch Gegner, die es dem
+    // Helden so vor der Nase wegschnappen können
+    const candidates = [];
+    if (game.hero && !game.isHeroDead) candidates.push(game.hero);
+    game.enemies.forEach(en => { if (!en.dead) candidates.push(en); });
+    for (const c of candidates) {
+      if (Math.hypot(c.x - this.x, c.y - 20 - this.y) < 26) {
+        this.collected = true;
+        c.collectPowerUp(this.type);
+        break;
+      }
     }
   }
   draw(ctx) {

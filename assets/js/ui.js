@@ -72,6 +72,16 @@ const ui = {
     document.getElementById("hud-level").textContent = `${(STRINGS[this.lang] || STRINGS.English).level}: ${g.levelNum}`;
     document.getElementById("hud-life").textContent = `❤ ${g.lifeEnergy}`;
     document.getElementById("hud-points").textContent = `${(STRINGS[this.lang] || STRINGS.English).points}: ${g.points}`;
+    const hero = g.hero;
+    const weaponsEl = document.getElementById("hud-weapons");
+    if (hero) {
+      const parts = [];
+      if (hero.hasShuriken) parts.push(`✦ ${hero.shurikenCount}`);
+      if (hero.hasSword) parts.push(`🗡`);
+      weaponsEl.textContent = parts.join("   ");
+    } else {
+      weaponsEl.textContent = "";
+    }
   },
   updateHudTime(seconds) {
     const s = Math.max(0, Math.ceil(seconds));
