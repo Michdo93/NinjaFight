@@ -5,42 +5,58 @@
  * dabei behobenen Fehler aus "Ninja Fight_KnownBugs.pdf".
  */
 
+// entspricht der "GUI/GUIComponent/Background"-Instanz, die laut den
+// Original-Leveldaten (Level1..4.xml) als allererstes Element in JEDEM
+// Level auf der Bühne liegt, zentriert auf die 1024×576-Bühne
+const levelBackground = new Image();
+levelBackground.src = "assets/img/background.png";
+
 /* ==================================================================== */
 /* Level-Kacheln zeichnen                                                */
 /* ==================================================================== */
 function drawLevel(ctx, level) {
-  // Hintergrund
-  const sky = ctx.createLinearGradient(0, 0, 0, STAGE_H);
-  sky.addColorStop(0, "#0b1a2c"); sky.addColorStop(1, "#0f2a3a");
-  ctx.fillStyle = sky; ctx.fillRect(0, 0, STAGE_W, STAGE_H);
+  // Original-Hintergrundbild statt einer dunklen Nacht-Optik — das Spiel
+  // spielt tagsüber vor derselben Wald-/Berg-Kulisse wie das Hauptmenü
+  if (levelBackground.complete && levelBackground.naturalWidth > 0) {
+    ctx.drawImage(levelBackground, 0, 0, STAGE_W, STAGE_H);
+  } else {
+    ctx.fillStyle = "#bfe8ea"; ctx.fillRect(0, 0, STAGE_W, STAGE_H);
+  }
 
+  // Original-Farben, per Pixelanalyse aus den exportierten Spiel-Frames
+  // bestätigt: dunkles Erdbraun mit hellgrünem Grasrand, khakifarbene
+  // Seilbrücke, kräftiges Himmelblau fürs Wasser (siehe README).
   level.platforms.forEach(p => {
     if (p.type === "WaterGround") {
-      ctx.fillStyle = "#1c5f7a";
+      ctx.fillStyle = "#58b8f3";
       ctx.fillRect(p.x, p.y, p.w, p.h + 14);
-      ctx.strokeStyle = "#5fe0c9"; ctx.lineWidth = 2;
+      ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + p.w, p.y); ctx.stroke();
     } else if (p.type === "Bridge") {
-      ctx.fillStyle = "#8a6339";
-      for (let i = 0; i < p.w; i += 8) ctx.fillRect(p.x + i, p.y, 5, p.h);
+      ctx.fillStyle = "#9f7048";
+      ctx.fillRect(p.x, p.y + p.h - 5, p.w, 5);
+      ctx.fillStyle = "#c2a373";
+      for (let i = 4; i < p.w; i += 9) { ctx.beginPath(); ctx.arc(p.x + i, p.y + p.h - 2, 3, 0, Math.PI * 2); ctx.fill(); }
     } else if (p.type === "Small") {
-      ctx.fillStyle = "#6b7280";
+      ctx.fillStyle = "#663300";
       ctx.fillRect(p.x, p.y, p.w, p.h);
-      ctx.fillStyle = "#8b95a3";
-      ctx.fillRect(p.x, p.y, p.w, 3);
+      ctx.fillStyle = "#80e49a";
+      ctx.fillRect(p.x, p.y, p.w, 4);
     } else {
-      ctx.fillStyle = "#4a3423";
+      ctx.fillStyle = "#663300";
       ctx.fillRect(p.x, p.y, p.w, p.h);
-      ctx.fillStyle = "#6b4d30";
+      ctx.fillStyle = "#845232";
+      ctx.fillRect(p.x, p.y + p.h - 3, p.w, 3);
+      ctx.fillStyle = "#80e49a";
       ctx.fillRect(p.x, p.y, p.w, 4);
     }
   });
 
   level.ladders.forEach(l => {
-    ctx.strokeStyle = "#a67432"; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(l.left + 2, l.top); ctx.lineTo(l.left + 2, l.bottom); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(l.right - 2, l.top); ctx.lineTo(l.right - 2, l.bottom); ctx.stroke();
-    for (let y = l.top; y < l.bottom; y += 10) { ctx.beginPath(); ctx.moveTo(l.left, y); ctx.lineTo(l.right, y); ctx.stroke(); }
+    ctx.fillStyle = "#845232";
+    ctx.fillRect(l.left, l.top, l.right - l.left, l.bottom - l.top);
+    ctx.strokeStyle = "#663300"; ctx.lineWidth = 2;
+    for (let y = l.top + 6; y < l.bottom; y += 10) { ctx.beginPath(); ctx.moveTo(l.left + 2, y); ctx.lineTo(l.right - 2, y); ctx.stroke(); }
   });
 
   level.flames.forEach(f => {
@@ -54,7 +70,7 @@ function drawLevel(ctx, level) {
   });
 
   level.knives.forEach(k => {
-    ctx.fillStyle = "#cfd6dd";
+    ctx.fillStyle = "#4a5a60";
     for (let i = 0; i < 4; i++) {
       ctx.beginPath();
       ctx.moveTo(k.x + i * 7, k.y + k.h);
@@ -62,6 +78,7 @@ function drawLevel(ctx, level) {
       ctx.lineTo(k.x + i * 7 + 7, k.y + k.h);
       ctx.closePath(); ctx.fill();
     }
+    ctx.strokeStyle = "#8b95a3"; ctx.lineWidth = 1; ctx.stroke();
   });
 }
 

@@ -232,14 +232,16 @@ canvas#stage {
 
 .controls-hint {
   position: absolute;
-  bottom: 8px;
+  bottom: 0;
   left: 0; right: 0;
   text-align: center;
   font-family: var(--font-mono);
   font-size: 0.68rem;
-  color: rgba(255,255,255,0.55);
+  color: rgba(255,255,255,0.85);
   z-index: 5;
   pointer-events: none;
+  padding: 8px 0;
+  background: linear-gradient(0deg, rgba(5,7,10,0.6), transparent);
 }
 
 .status-msg {

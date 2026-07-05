@@ -112,6 +112,31 @@ nie griff. In dieser Portierung sperrt `Hero.setState()` korrekt: eine
 laufende Angriffs-/Sprunganimation kann nicht durch Bewegung unterbrochen
 werden (mit Tests verifiziert, siehe unten).
 
+## Original-Farbpalette bestätigt
+
+Ein Export der ersten Zeitleisten-Frames aus der SWF zeigte zwar nur die
+Menü-Bildschirme, aber einer davon (ein Level-Vorschaubild mit HUD) verrät
+die tatsächliche Spielfarbwelt — deutlich heller und freundlicher als eine
+ursprüngliche Fassung dieser Portierung, die versehentlich eine dunkle
+Nacht-Optik verwendete. Per Pixelanalyse wurden folgende Original-Farben
+bestätigt und übernommen:
+
+| Element | Farbe | Hex |
+|---------|-------|-----|
+| Himmel/Hintergrund | helles Blau-Grün (Wald/Berge) | aus `background.png` |
+| Boden/Plattform (Erde) | dunkles Braun | `#663300` |
+| Grasrand auf Plattformen | kräftiges Grün | `#80e49a` |
+| Seilbrücke | Khaki/Tan | `#9f7048` |
+| Wasser | kräftiges Himmelblau | `#58b8f3` |
+| Messer/Spikes | Blaugrau-Metall | `#4a5a60` |
+| Leiter | mittleres Braun | `#845232` |
+
+Wichtigste Erkenntnis dabei: Laut den Original-Leveldaten
+(`Level1..4.xml`) ist die `GUI/GUIComponent/Background`-Grafik (dasselbe
+helle Wald-Hintergrundbild wie im Hauptmenü) das **erste Element in jedem
+einzelnen Level** — das Spiel spielt tagsüber vor derselben freundlichen
+Kulisse wie die Menüs, nicht nachts.
+
 ## Notwendige Anpassungen für GitHub Pages
 
 - **Server-Highscore → `localStorage`.** Das Original schickte Highscores
