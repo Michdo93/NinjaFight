@@ -101,6 +101,17 @@ const ui = {
     this.showScreen("gameover");
   },
 
+  showVictory(points) {
+    document.getElementById("victory-points").textContent = points;
+    document.getElementById("victory-name").value = "";
+    document.getElementById("victory-name").disabled = false;
+    const btn = document.getElementById("btn-victory-send-score");
+    btn.disabled = false;
+    btn.textContent = (STRINGS[this.lang] || STRINGS.English).sendScore;
+    this._pendingScore = { level: 10, points };
+    this.showScreen("victory");
+  },
+
   /* -------- Highscore: localStorage statt PHP-Server -------- */
   loadHighscoreList() {
     try { return JSON.parse(localStorage.getItem(HIGHSCORE_KEY) || "[]"); }
@@ -162,6 +173,18 @@ const ui = {
     });
     document.getElementById("btn-play-again").addEventListener("click", () => game.startGame());
     document.getElementById("btn-back-to-menu").addEventListener("click", () => this.showScreen("menu"));
+
+    // Sieg-Bildschirm — identisches Verhalten wie Game Over
+    document.getElementById("btn-victory-send-score").addEventListener("click", () => {
+      const name = document.getElementById("victory-name").value.trim();
+      this.saveHighscoreEntry(name, this._pendingScore.points, this._pendingScore.level);
+      document.getElementById("victory-name").disabled = true;
+      const btn = document.getElementById("btn-victory-send-score");
+      btn.disabled = true;
+      btn.textContent = "✓";
+    });
+    document.getElementById("btn-victory-play-again").addEventListener("click", () => game.startGame());
+    document.getElementById("btn-victory-back-to-menu").addEventListener("click", () => this.showScreen("menu"));
 
     // ESC im Spiel pausiert (Fix für KnownBugs #1 — im Original auskommentiert)
     document.getElementById("btn-pause-icon")?.addEventListener("click", () => game.pauseGame());

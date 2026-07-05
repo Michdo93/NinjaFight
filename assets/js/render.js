@@ -65,10 +65,15 @@ function mergeLadderColumns(tiles) {
   const groups = [];
   tiles.forEach(t => {
     let g = groups.find(g => Math.abs(g.x - t.x) < 8);
-    if (!g) { g = { x: t.x, minY: t.y, maxY: t.y + t.h }; groups.push(g); }
-    else { g.minY = Math.min(g.minY, t.y); g.maxY = Math.max(g.maxY, t.y + t.h); }
+    if (!g) { g = { x: t.x, minY: t.y, maxY: t.y }; groups.push(g); }
+    else { g.minY = Math.min(g.minY, t.y); g.maxY = Math.max(g.maxY, t.y); }
   });
-  return groups.map(g => ({ left: g.x, right: g.x + LADDER_W, top: g.minY, bottom: g.maxY + TILE_H }));
+  // "bottom" reicht genau eine Kachelbreite über die letzte Sprosse hinaus
+  // (vorher wurde hier fälschlich zusätzlich die volle Kachelhöhe UND ein
+  // ganzes TILE_H addiert — die Leiter reichte dadurch weit unter den
+  // tatsächlichen Boden, wodurch v.a. Gegner beim Verlassen der Leiter
+  // ins Leere fielen)
+  return groups.map(g => ({ left: g.x, right: g.x + LADDER_W, top: g.minY, bottom: g.maxY + 24 }));
 }
 
 /* ==================================================================== */

@@ -9,6 +9,10 @@
  * (KnownBugs #1).
  */
 
+// gemeinsame Schadenstabelle für Held und Gegner
+const DAMAGE = { Hit: 1, Kick: 2, Shuriken: 5, Sword: 10 };
+const SWORD_PICKUP_DURATION = 5; // Sekunden, wie gewünscht zeitlich begrenzt
+
 /* ==================================================================== */
 /* Hero — entspricht HeroController.as                                   */
 /* ==================================================================== */
@@ -23,6 +27,7 @@ class Hero {
     this.onGround = false;
     this.onLadder = false;
     this.hasSword = false;
+    this.swordTimer = 0;
     this.hasShuriken = false;
     this.shurikenCount = 0;
     this.attackTimer = 0;
@@ -110,10 +115,17 @@ class Hero {
 
     if (this.y > STAGE_H + 80) this.game.onHeroDeath("fall");
 
+    // Schwert ist nur zeitlich begrenzt verfügbar, sobald aufgesammelt
+    if (this.hasSword && this.swordTimer > 0) {
+      this.swordTimer -= dt;
+      if (this.swordTimer <= 0) { this.hasSword = false; this.swordTimer = 0; }
+    }
+
     // Angriffs-Trefferprüfung (Fix für KnownBugs #2 "keine Schadenkollision")
+    // — unterschiedlicher Schaden je Angriffsart
     if (this.attackTimer > 0 && !this.attackHitDone && ["Hit", "Kick", "SwordHit"].includes(this.state)) {
-      const range = this.state === "SwordHit" ? 46 : 30;
-      const dmg = this.state === "SwordHit" ? 2 : 1;
+      const range = this.state === "SwordHit" ? 46 : this.state === "Kick" ? 34 : 30;
+      const dmg = this.state === "SwordHit" ? DAMAGE.Sword : this.state === "Kick" ? DAMAGE.Kick : DAMAGE.Hit;
       const hitBox = rectOf(this.x + (this.facing > 0 ? 0 : -range), this.y - 40, range, 30);
       this.game.enemies.forEach(en => { if (!en.dead && overlaps(hitBox, en.box)) { en.takeDamage(dmg); this.attackHitDone = true; } });
     }
@@ -159,7 +171,7 @@ class Hero {
 
   collectPowerUp(type) {
     if (type === "Heart") this.game.changeLifeEnergy(2, false);
-    else if (type === "Sword") this.hasSword = true;
+    else if (type === "Sword") { this.hasSword = true; this.swordTimer = SWORD_PICKUP_DURATION; }
     else if (type === "Shuriken") { this.hasShuriken = true; this.shurikenCount += 3; }
     this.game.sound.playCollect();
   }
@@ -179,6 +191,8 @@ const ENEMY_TYPES = {
   White: { canShuriken: true, canSword: true },
 };
 
+const HP_BY_TYPE = { Blue: 10, Green: 20, Red: 30, White: 50 };
+
 class Enemy {
   constructor(game, type, x, y) {
     this.game = game;
@@ -189,9 +203,10 @@ class Enemy {
     this.facing = Math.random() > 0.5 ? 1 : -1;
     this.state = "Idle";
     this.t = 0;
-    this.hp = 3;
-    this.maxHp = 3;
-    this.hasSword = this.def.canSword; // startet ggf. schon bewaffnet, kann zusätzlich Items stehlen
+    this.maxHp = HP_BY_TYPE[type] || 10;
+    this.hp = this.maxHp;
+    this.hasSword = this.def.canSword; // dauerhaft, keine Uhr (angeborene Fähigkeit)
+    this.swordTimer = 0; // >0 nur bei einem GESTOHLENEN, zeitlich begrenzten Schwert
     this.hasShuriken = this.def.canShuriken;
     this.shurikenCount = this.def.canShuriken ? 99 : 0;
     this.dead = false;
@@ -230,7 +245,15 @@ class Enemy {
         this.climbDirection = Math.random() > 0.5 ? -1 : 1;
         this.climbCooldown = 4 + Math.random() * 4;
       } else {
-        this.x += this.facing * ENEMY_SPEED * dt;
+        const lookAhead = 26;
+        const supported = this.hasSupportAhead(lookAhead);
+        if (!supported) {
+          // Kante erkannt — umdrehen statt blind herunterzufallen (Fix:
+          // Gegner haben sich vorher zu oft selbst umgebracht)
+          this.facing *= -1;
+        } else {
+          this.x += this.facing * ENEMY_SPEED * dt;
+        }
         this.setState("Walk");
         if (this.x <= this.patrolLeft) { this.x = this.patrolLeft; this.facing = 1; }
         else if (this.x >= this.patrolRight) { this.x = this.patrolRight; this.facing = -1; }
@@ -238,7 +261,7 @@ class Enemy {
           this.onLadder = true;
           this.climbDirection = Math.random() > 0.5 ? -1 : 1;
           this.climbCooldown = 4 + Math.random() * 4;
-        } else if (this.onGround && this.jumpCooldown <= 0 && Math.random() < 0.01) {
+        } else if (supported && this.onGround && this.jumpCooldown <= 0 && Math.random() < 0.01) {
           this.vy = -560; this.onGround = false; this.setState("Jump");
           this.jumpCooldown = 2.5 + Math.random() * 3;
         }
@@ -263,31 +286,50 @@ class Enemy {
     // Spiel ist (Bugfix)
     if (this.y > STAGE_H + 80 || this.fallTime > 3) { this.dead = true; this.game.onEnemyKilled(this); return; }
 
+    // ein gestohlenes (nicht angeborenes) Schwert ist nur zeitlich begrenzt
+    if (this.swordTimer > 0) {
+      this.swordTimer -= dt;
+      if (this.swordTimer <= 0 && !this.def.canSword) { this.hasSword = false; this.swordTimer = 0; }
+    }
+
     // Held angreifen, wenn in Reichweite — unterbricht die Bewegung nur ganz
-    // kurz (Angriffsdauer), nicht die gesamte Abklingzeit
+    // kurz (Angriffsdauer), nicht die gesamte Abklingzeit. Alle Gegner
+    // können Schlagen UND Treten (unterschiedlicher Schaden), Shuriken/
+    // Schwert nur mit der jeweiligen Spezialfähigkeit.
     const hero = this.game.hero;
     if (hero && !this.game.isHeroDead && this.attackCooldown <= 0 && !this.onLadder) {
       const dist = Math.hypot(hero.x - this.x, hero.y - this.y);
       if (dist < 260) this.facing = hero.x > this.x ? 1 : -1;
       if (dist < 40) {
-        this.setState("Hit"); this.attackTimer = 0.3; this.attackCooldown = 1.4 + Math.random();
-        hero.takeDamage(1);
+        const useKick = Math.random() < 0.5;
+        this.setState(useKick ? "Kick" : "Hit");
+        this.attackTimer = 0.3; this.attackCooldown = 1.4 + Math.random();
+        hero.takeDamage(useKick ? DAMAGE.Kick : DAMAGE.Hit);
       } else if (dist < 260 && this.hasShuriken && this.shurikenCount > 0 && Math.random() < 0.5) {
         this.setState("Throw"); this.attackTimer = 0.3; this.attackCooldown = 2 + Math.random() * 1.5;
         this.game.spawnProjectile(this.x + this.facing * 18, this.y - 30, this.facing, "enemy");
         this.shurikenCount--;
-        if (this.shurikenCount <= 0) this.hasShuriken = false;
+        if (this.shurikenCount <= 0) { this.shurikenCount = this.def.canShuriken ? 99 : 0; if (!this.def.canShuriken) this.hasShuriken = false; }
       } else if (dist < 60 && this.hasSword) {
         this.setState("SwordHit"); this.attackTimer = 0.3; this.attackCooldown = 1.6 + Math.random();
-        hero.takeDamage(2);
+        hero.takeDamage(DAMAGE.Sword);
       }
     }
 
-    if (this.attackTimer <= 0 && ["Hit", "SwordHit", "Throw"].includes(this.state)) this.setState("Idle");
+    if (this.attackTimer <= 0 && ["Hit", "Kick", "SwordHit", "Throw"].includes(this.state)) this.setState("Idle");
   }
 
   findNearbyLadder() {
     return this.game.level.ladders.find(l => Math.abs(this.x - (l.left + l.right) / 2) < 30 && this.y >= l.top - 10 && this.y <= l.bottom + 10);
+  }
+
+  // prüft, ob an einer Position ein Stück voraus noch Boden (oder eine
+  // Leiter) ist — verhindert, dass Gegner blind über Kanten laufen
+  hasSupportAhead(dist) {
+    const aheadX = this.x + this.facing * dist;
+    const onPlatform = this.game.level.platforms.some(p => aheadX > p.x - 4 && aheadX < p.x + p.w + 4 && Math.abs(p.y - this.y) < 6);
+    const onLadder = this.game.level.ladders.some(l => aheadX > l.left - 4 && aheadX < l.right + 4 && this.y >= l.top - 6 && this.y <= l.bottom + 6);
+    return onPlatform || onLadder;
   }
 
   climb(dt) {
@@ -323,8 +365,8 @@ class Enemy {
   // Gegner können Items ebenso einsammeln wie der Held — und sie ihm so
   // vor der Nase wegschnappen
   collectPowerUp(type) {
-    if (type === "Heart") this.hp = Math.min(this.maxHp, this.hp + 1);
-    else if (type === "Sword") this.hasSword = true;
+    if (type === "Heart") this.hp = Math.min(this.maxHp, this.hp + Math.ceil(this.maxHp * 0.2));
+    else if (type === "Sword") { this.hasSword = true; if (!this.def.canSword) this.swordTimer = SWORD_PICKUP_DURATION; }
     else if (type === "Shuriken") { this.hasShuriken = true; this.shurikenCount += 3; }
     this.game.sound.playCollect();
   }
@@ -354,9 +396,9 @@ class Projectile {
     if (this.x < -20 || this.x > STAGE_W + 20) this.dead = true;
 
     if (this.owner === "hero") {
-      game.enemies.forEach(en => { if (!en.dead && !this.dead && Math.hypot(en.x - this.x, (en.y - 30) - this.y) < 22) { en.takeDamage(1); this.dead = true; } });
+      game.enemies.forEach(en => { if (!en.dead && !this.dead && Math.hypot(en.x - this.x, (en.y - 30) - this.y) < 22) { en.takeDamage(DAMAGE.Shuriken); this.dead = true; } });
     } else if (game.hero && !this.dead && Math.hypot(game.hero.x - this.x, (game.hero.y - 30) - this.y) < 22) {
-      game.hero.takeDamage(1);
+      game.hero.takeDamage(DAMAGE.Shuriken);
       this.dead = true;
     }
   }

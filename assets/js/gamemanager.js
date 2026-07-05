@@ -96,7 +96,7 @@ class GameManager {
 
     this.cleanUpLevel();
 
-    if (this.levelNum >= this.maxLevels) { this.endGame(); return; }
+    if (this.levelNum >= this.maxLevels) { this.winGame(); return; }
     this.levelNum++;
     this.isHeroDead = false;
 
@@ -167,6 +167,17 @@ class GameManager {
     this.sound.stopAll();
     this.sound.playMenuMusic();
     ui.showGameOver(this.levelNum, this.points);
+  }
+
+  // entspricht dem Original nicht direkt (dort gab es keinen echten
+  // Sieg-Zustand) — wird ausgelöst, wenn alle 10 Level ohne Tod
+  // abgeschlossen wurden
+  winGame() {
+    this.running = false;
+    this.cleanUpLevel();
+    this.sound.stopAll();
+    this.sound.playMenuMusic();
+    ui.showVictory(this.points);
   }
 
   onHeroDeath(cause) {

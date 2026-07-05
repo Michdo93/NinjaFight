@@ -122,7 +122,25 @@
       </div>
     </div>
 
+    <!-- Sieg: alle 10 Level ohne Tod abgeschlossen -->
+    <div id="screen-victory" class="screen with-bg">
+      <h1 class="game-title" data-i18n="title">Ninja Fight</h1>
+      <h2 class="screen-title">🏆 You Won!</h2>
+      <div class="gameover-stats">
+        <div><div class="value" id="victory-points">0</div><div class="label" data-i18n="points">Points</div></div>
+      </div>
+      <div class="gameover-form">
+        <input type="text" id="victory-name" data-i18n-placeholder="yourName" placeholder="Your Name">
+        <button class="btn" id="btn-victory-send-score" data-i18n="sendScore">Send Score</button>
+      </div>
+      <div class="menu-buttons">
+        <button class="btn ghost" id="btn-victory-play-again" data-i18n="playAgain">Play Again</button>
+        <button class="btn ghost" id="btn-victory-back-to-menu" data-i18n="backToMenu">Back to Menu</button>
+      </div>
+    </div>
+
   </div>
+
 
   <footer class="site-footer">
     Original: Adobe Animate / ActionScript 3 (Michael Dörflinger, HFU 2018) ·

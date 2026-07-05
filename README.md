@@ -178,6 +178,18 @@ farblich angenähert.
 | Schwert/Shuriken gingen bei Levelwechsel verloren | **Echter Bug gefunden:** `cleanUpLevel()` setzte `this.hero = null`, *bevor* der Waffenstatus für die Übernahme ins nächste Level ausgelesen wurde — die Werte waren dadurch immer schon weg. Jetzt wird der Status vor dem Aufräumen gesichert |
 | Nur 4 Level | **6 neue Level ergänzt (jetzt 10 insgesamt).** Level 5–10 sind neu von Hand entworfen (keine Original-FLA-Daten dafür vorhanden), mit Feuer, Leitern, Stacheln und Wassergräben, jeweils vollständig begehbarem Boden (automatisiert geprüft). Ab Level 5 sind die Gegnertypen **gemischt** (zufällig aus Blue/Green/Red/White gewählt), Level 1–4 bleiben bei ihrem Original-Einzeltyp. Gegneranzahl pro Level unterschiedlich: 5, 6, 5, 7, 6, 8 |
 
+## Vierte Feedback-Runde: Sieg-Bildschirm, KI, Kampfwerte
+
+| Wunsch/Problem | Umsetzung |
+|-----------------|-----------|
+| Nach Level 10 kam Game Over statt einer Sieg-Anzeige | neuer `#screen-victory`-Bildschirm ("🏆 You Won!") mit eigenem Highscore-Eintrag, ausgelöst über `GameManager.winGame()` statt `endGame()`, wenn alle 10 Level ohne Tod abgeschlossen wurden |
+| Gegner fielen zu oft von Plattformen | `Enemy.hasSupportAhead()` prüft jetzt vor jeder Bewegung, ob vor der Figur noch Boden oder eine Leiter ist — ist das nicht der Fall, wird umgedreht statt weiterzulaufen. Zusätzlich: der zufällige Sprung wird nur noch ausgelöst, wenn auch vor dem Sprung Boden erkannt wird |
+| **Dabei gefunden:** Leiter-Kollisionsbox reichte weit unter das eigentliche Bodenniveau | `mergeLadderColumns()` addierte fälschlich sowohl die Kachelhöhe als auch eine komplette zusätzliche Kachelhöhe auf das untere Ende — die Leiter reichte dadurch bis zu 48px unter den Boden. Wer die Leiter am unteren Ende verließ, konnte dadurch unter die eigentliche Landefläche fallen. Behoben; alle 10 Level zusätzlich mit einem eigenen Test über 60 simulierte Sekunden pro Level verifiziert (0% Sturz-Tode) |
+| Schwert war dauerhaft, sollte zeitlich begrenzt sein | 5 Sekunden ab Aufnahme (`SWORD_PICKUP_DURATION`), danach automatisch wieder verloren — gilt für Held und gestohlene Schwerter bei Gegnern. Gegner mit **angeborener** Schwertfähigkeit (Red/White) behalten sie dauerhaft, das ist ihre Grundausstattung, keine Zeitbegrenzung |
+| Alle Angriffe machten gleich viel Schaden | gemeinsame Schadenstabelle: Schlag = 1, Tritt = 2, Shuriken = 5, Schwert = 10 — gilt symmetrisch für Held und Gegner |
+| Alle Gegner hatten gleich viel HP (3, "nach 3 Tritten KO") | HP jetzt an den Ursprungslevel gekoppelt, nicht an das aktuelle Level: Blue (Level 1) = 10 HP, Green (Level 2) = 20 HP, Red (Level 3) = 30 HP, White (Level 4) = 50 HP — bleibt auch in den gemischten Leveln 5–10 so |
+| Gegner aus Level 1 konnten nur "Hit" | alle Gegner wählen jetzt zufällig zwischen Schlag und Tritt im Nahkampf; Shuriken/Schwert bleiben exklusiv an die jeweilige Spezialfähigkeit gebunden (Blue: keine, Green: Shuriken, Red: Schwert, White: beides) |
+
 ## Notwendige Anpassungen für GitHub Pages
 
 - **Server-Highscore → `localStorage`.** Das Original schickte Highscores
