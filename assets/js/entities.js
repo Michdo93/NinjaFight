@@ -85,21 +85,25 @@ class Hero {
     if (this.state === "Die") { this.y += 40 * dt; return; }
 
     // Leiter-Erkennung (Fix für KnownBugs #1 "Leiter funktioniert nicht").
-    // Klettern greift nur, solange ausschließlich hoch/runter gedrückt wird
-    // — sobald links/rechts gedrückt wird (oder oben/unten losgelassen),
-    // verlässt die Figur die Leiter sofort und läuft normal weiter (Fix
-    // für "am Ende der Leiter nicht normal weiterlaufen können").
+    // Wer klettert, steht auf einer Sprosse und hält sich an einer
+    // anderen fest — er rutscht nicht von selbst herunter, nur weil
+    // gerade keine Taste gedrückt wird. Die Schwerkraft ist deshalb
+    // allein durch die Zugehörigkeit zur Leiterzone aufgehoben (nicht nur
+    // während aktiv hoch/runter gedrückt wird) — hoch/runter steuern nur,
+    // OB und WOHIN man sich bewegt. Verlassen wird die Leiter durch
+    // seitliche Bewegung (links/rechts), dann greift sofort wieder die
+    // normale Physik (Fix für "am Ende der Leiter nicht normal
+    // weiterlaufen können").
     const ladderZone = this.game.level.ladders.find(l => this.x > l.left - 4 && this.x < l.right + 4 && this.y > l.top - 6 && this.y < l.bottom + 6);
-    const wantsToClimb = ladderZone && (k.up || k.down) && !k.left && !k.right;
+    this.onLadder = !!ladderZone && !k.left && !k.right;
 
-    if (wantsToClimb) {
-      this.onLadder = true;
+    if (this.onLadder) {
       this.vy = 0;
-      this.y += (k.up ? -1 : 1) * CLIMB_SPEED * dt;
+      if (k.up) this.y -= CLIMB_SPEED * dt;
+      else if (k.down) this.y += CLIMB_SPEED * dt;
       this.y = clamp(this.y, ladderZone.top, ladderZone.bottom);
       this.setState("Climb");
     } else {
-      this.onLadder = false;
       this.moveHorizontal(dt);
     }
 

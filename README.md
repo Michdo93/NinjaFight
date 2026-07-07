@@ -7,7 +7,7 @@ Repo portiert das komplette, in der Abgabe unfertig gebliebene Spiel nach
 **HTML5 Canvas + Vanilla JavaScript** — lauffähig direkt im Browser, ohne
 Flash Player, ohne Build-Schritt, bereit für GitHub Pages.
 
-▶ **[Spielen](https://michdo93.github.io/NinjaFight/)**
+▶ **[Spielen](./index.html)**
 
 ## Ausgangslage
 
@@ -207,6 +207,12 @@ farblich angenähert.
 | Feuer/Stacheln verletzen auch Gegner | neue `Enemy.checkHazards()`, spiegelbildlich zu `Hero.checkHazards()`: Feuer zieht 1 HP pro Kontakt (mit kurzer Abklingzeit), Stacheln 5 HP — Gegner sterben dadurch nicht sofort, sondern verlieren nur Lebenspunkte, wie gewünscht |
 | Friendly Fire zwischen Gegnern (Schlag/Tritt/Schwert/Shuriken) | `Enemy.hitNearbyEnemies()` prüft bei jedem Nahkampftreffer zusätzlich andere Gegner im Wirkungsbereich; `Projectile` wurde umgebaut, um die tatsächliche Werfer-Instanz zu kennen (statt nur "hero"/"enemy" als Text) und trifft jetzt jeden **außer dem Werfer selbst** — ein Shuriken kann dadurch versehentlich einen anderen Gegner treffen |
 | Zeit abgelaufen + noch Gegner übrig = Niederlage | vorher wurde ein Zeitablauf immer als "Level geschafft, weiter" gewertet, egal wie viele Gegner noch lebten. Jetzt: sind bei Zeit-Ablauf noch Gegner am Leben, ist das Spiel vorbei (Game Over) statt automatisch ins nächste Level zu wechseln |
+
+## Siebte Feedback-Runde: Leiter-Schwerkraft korrigiert
+
+| Problem | Fix |
+|---------|-----|
+| Beim Klettern rutschte man herunter, sobald man hoch/runter losließ, obwohl man noch mitten auf der Leiter stand | Derselbe Fehler wie im Begleit-Tutorial (Kapitel 9): die Schwerkraft wurde nur aufgehoben, solange aktiv hoch/runter gedrückt wurde. Jetzt gilt: solange man sich in der Leiterzone befindet (und nicht seitlich aussteigt), ist die Schwerkraft grundsätzlich aufgehoben — man hängt an einer Sprosse fest, auch ohne eine Taste zu drücken, und bewegt sich nur, wenn man aktiv hoch oder runter drückt. Mit eigenem Test verifiziert (`hero.vy` bleibt `0`, Position bleibt exakt gleich, solange man in der Zone ist und keine Taste drückt) |
 
 ## Notwendige Anpassungen für GitHub Pages
 
